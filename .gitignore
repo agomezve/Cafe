@@ -1,0 +1,7 @@
+node_modules/
+.vercel
+.env
+.env.local
+
+# datos locales (no se suben; en producción la base vive en Postgres en la nube)
+data/

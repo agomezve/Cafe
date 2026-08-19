@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resumen - SLCLAB Café</title>
+    <link rel="stylesheet" href="estilos.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/favicon.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <meta name="theme-color" content="#6F4E37">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Turno Café">
+</head>
+<body>
+    <div class="app-container">
+        <div id="areaResumen" style="padding: 25px; background-color: var(--card-bg); border-radius: 12px; width: 100%; box-sizing: border-box;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="logo-slclab.png" alt="SLCLAB Logo" width="120">
+                <h2 style="margin: 10px 0 5px 0;">Resumen del Turno</h2>
+                <p id="totalPedidos" style="font-weight: bold; color: var(--primary-color); font-size: 1.2rem;"></p>
+            </div>
+            <div id="listaPedidos"></div>
+        </div>
+        
+        <button id="btnLimpiarTurno" style="background-color: #d32f2f; margin-top: 20px;">🗑️ Finalizar Turno (Borrar lista)</button>
+        <button id="btnVolver" style="background-color: #9e9e9e;">Volver atrás</button>
+        <button id="btnCerrarSesion" style="background-color: #607d8b;">🚪 Cerrar Sesión</button>
+    </div>
+    <script src="auth.js"></script>
+    <script src="resumen.js"></script>
+</body>
+</html>

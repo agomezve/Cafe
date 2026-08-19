@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedido - SLCLAB Café</title>
+    <link rel="stylesheet" href="estilos.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/favicon.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <meta name="theme-color" content="#6F4E37">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Turno Café">
+</head>
+<body>
+    <div class="app-container">
+        <img src="logo-slclab.png" alt="SLCLAB" width="100">
+        <h2>Hola <span id="nombreUsuario"></span>, elige tu café:</h2>
+        
+        <div class="cafe-options">
+            <label><input type="radio" name="cafe" value="Solo"> Café Solo</label>
+            <label><input type="radio" name="cafe" value="Con Leche"> Café con Leche</label>
+            <label><input type="radio" name="cafe" value="Cortado"> Cortado</label>
+            <label><input type="radio" name="cafe" value="Otro"> Otro</label>
+        </div>
+
+        <input type="text" id="otroTexto" placeholder="¿Qué quieres tomar?" maxlength="40" style="display:none;">
+
+        <p id="hieloStatus"></p>
+        
+        <button id="btnGuardar">Guardar Pedido</button>
+        <p id="avisoTurno"></p>
+        <hr>
+        <button id="btnResumen" style="background-color: var(--secondary-color);">Generar Resumen de este Turno</button>
+        <button id="btnCerrarSesion" style="background-color: #607d8b;">🚪 Cerrar Sesión</button>
+    </div>
+    <script src="auth.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
