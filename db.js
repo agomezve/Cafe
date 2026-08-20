@@ -50,6 +50,26 @@ const ESQUEMA = [
         hielo BOOLEAN NOT NULL DEFAULT FALSE,
         creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
     )`,
+    // Ajustes internos del servidor. Guarda el secreto que firma las sesiones
+    // para que todas las instancias de Vercel usen el mismo: si cada una se
+    // inventa el suyo, el token que da el login lo rechaza la siguiente.
+    `CREATE TABLE IF NOT EXISTS ajustes (
+        clave TEXT PRIMARY KEY,
+        valor TEXT NOT NULL
+    )`,
+    // Lo último que pidió cada uno, para poder ofrecérselo otro día. A
+    // diferencia de "pedidos", esto no caduca.
+    `CREATE TABLE IF NOT EXISTS preferencias (
+        usuario TEXT PRIMARY KEY REFERENCES usuarios(nombre) ON DELETE CASCADE,
+        tipo_cafe TEXT,
+        hielo BOOLEAN NOT NULL DEFAULT FALSE,
+        pincho TEXT,
+        actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`,
+    // El pedido pasa a llevar también pincho, y se puede pedir solo una cosa
+    // de las dos (café sin pincho o pincho sin café).
+    `ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS pincho TEXT`,
+    `ALTER TABLE pedidos ALTER COLUMN tipo_cafe DROP NOT NULL`,
     // Migración del esquema anterior (un pedido por persona y día). Ahora los
     // pedidos caducan solos, así que la unicidad pasa a ser solo por persona:
     // mientras tu pedido siga vivo no puedes pedir otro, y al caducar sí.
@@ -97,4 +117,16 @@ async function limpiarPedidosCaducados() {
     return query(SQL_BORRAR_CADUCADOS);
 }
 
-module.exports = { query, limpiarPedidosCaducados, MINUTOS_TURNO };
+// Lee un ajuste; si no existe lo crea con el valor propuesto. Devuelve
+// siempre el valor que quedó guardado, así dos instancias que arranquen a la
+// vez acaban con el mismo (gana la que insertó primero).
+async function ajusteEstable(clave, valorPropuesto) {
+    await query(
+        `INSERT INTO ajustes (clave, valor) VALUES ($1, $2) ON CONFLICT (clave) DO NOTHING`,
+        [clave, valorPropuesto]
+    );
+    const { rows } = await query(`SELECT valor FROM ajustes WHERE clave = $1`, [clave]);
+    return rows[0] ? rows[0].valor : valorPropuesto;
+}
+
+module.exports = { query, limpiarPedidosCaducados, ajusteEstable, MINUTOS_TURNO };

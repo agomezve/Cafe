@@ -1,8 +1,8 @@
 {
-  "name": "turno-cafe-slclab",
+  "name": "cafendo",
   "version": "1.0.0",
   "private": true,
-  "description": "App del turno del café de SLCLAB: login, pedido y resumen del turno, con base de datos en la nube.",
+  "description": "Cafendo: la app del turno del café y los pinchos de SLCLAB, con base de datos en la nube.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

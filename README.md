@@ -1,6 +1,7 @@
-# Turno del café · SLCLAB
+# Cafendo · SLCLAB
 
-Web app para apuntar el café de los del laboratorio y ver el resumen del turno.
+Web app para apuntar el café y el pincho de los del laboratorio y ver el
+resumen del turno.
 Pensada para instalarse como app en el móvil (iOS y Android) y para desplegarse
 en Vercel con la base de datos en la nube (Postgres), así funciona fuera de la
 oficina y sin depender de que un ordenador esté encendido.
@@ -10,9 +11,16 @@ oficina y sin depender de que un ordenador esté encendido.
 1. **Login**: cada persona entra con su nombre y la contraseña común. El
    servidor devuelve un token firmado que se guarda en el móvil, así no hay
    que volver a entrar cada día (dura 30 días).
-2. **Elegir café**: Solo, Con Leche o Cortado (con opción de hielo), u "Otro"
-   escribiendo a mano lo que sea (una Coca-Cola, un té...). En "Otro" no se
-   pregunta por el hielo.
+2. **Elegir**: la pantalla tiene dos apartados y se puede pedir de uno, del
+   otro o de los dos.
+   - **Cafés y bebidas**: Solo, Con Leche, Cortado o Descafeinado (con opción
+     de hielo), u "Otro" escribiendo a mano lo que sea (una Coca-Cola, un
+     té...). En "Otro" no se pregunta por el hielo, y marcando "Sin café" se
+     puede pedir solo pincho.
+   - **Pinchos**: Patatas, Jeta, Gulas, Huevos rotos, Lasaña, Tortilla,
+     Bocadillo, Gambas rebozadas y "Otro" a mano. Por defecto va sin pincho.
+   Si esa persona ya pidió otro día, arriba le sale un aviso con lo que pidió
+   la última vez y un botón para dejarlo marcado de una vez.
 3. **Guardar**: un pedido por persona mientras dure el turno. Si alguien lo
    repite, el servidor lo rechaza y le dice cuántos minutos quedan (y aunque
    se dé doble toque a la vez desde el móvil, la base de datos solo deja
@@ -22,8 +30,8 @@ oficina y sin depender de que un ordenador esté encendido.
    de la ronda anterior, y quien ya pidió puede volver a pedir. No hace falta
    que nadie borre nada a mano ni que haya un proceso corriendo de fondo: la
    limpieza se hace al pedir y al mirar el resumen.
-5. **Resumen**: totales por tipo de café, vasos con hielo y quién ha pedido
-   qué, solo del turno en curso. El botón "Finalizar Turno" lo vacía a mano
+5. **Resumen**: totales por tipo de café, por pincho, vasos con hielo y quién
+   ha pedido qué, solo del turno en curso. El botón "Finalizar Turno" lo vacía a mano
    por si se quiere arrancar la siguiente ronda sin esperar los 25 minutos.
 
 ## Arrancar en local
@@ -99,7 +107,7 @@ instalar nada, con `npx`) y una cuenta de Vercel.
    npx vercel --prod
    ```
 
-   Esto imprime la URL final (algo como `https://turno-cafe-slclab.vercel.app`).
+   Esto imprime la URL final (algo como `https://cafendo.vercel.app`).
    Esa es la que le pasas a tus compañeros.
 
 ## Que lo instalen en el móvil
@@ -114,7 +122,7 @@ Queda como un icono más, a pantalla completa, sin barra del navegador.
 ## Estructura
 
 ```
-turno-cafe/
+cafendo/
 ├── server.js              app Express (login, pedidos, resumen)
 ├── db.js                  esquema y consultas (Postgres en la nube o local)
 ├── api/index.js           punto de entrada para Vercel (funciones serverless)
@@ -136,13 +144,21 @@ turno-cafe/
 ## Base de datos
 
 Tablas `usuarios (id, nombre, password)` y
-`pedidos (id, usuario, tipo_cafe, hielo, creado_en)`, con un índice único por
+`pedidos (id, usuario, tipo_cafe, hielo, pincho, creado_en)`, con un índice único por
 `usuario` — eso es lo que impide pedidos duplicados en el mismo turno, incluso
 si dos peticiones llegan a la vez. Como los pedidos se borran al caducar, esa
 misma restricción deja pedir otra vez en el turno siguiente.
 
 En la tabla solo vive el turno actual: no se guarda histórico de lo que pidió
-cada uno.
+cada uno. Aparte hay dos tablas que no caducan:
+
+- `preferencias (usuario, tipo_cafe, hielo, pincho, actualizado_en)`: lo último
+  que pidió cada persona, para ofrecérselo cuando vuelve otro día.
+- `ajustes (clave, valor)`: guarda el secreto que firma las sesiones. Es
+  importante que sea el mismo en todas las instancias: en Vercel cada petición
+  puede caer en una función distinta y, si cada una se inventa el suyo, el
+  token del login lo rechaza la siguiente y te echa de la sesión a media
+  faena. Si defines `SESSION_SECRET` manda esa y la tabla no se usa.
 
 ## Cosas que querrás tocar
 

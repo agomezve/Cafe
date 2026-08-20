@@ -37,6 +37,25 @@
         @apply mb-6 text-center text-[1.4rem] font-bold;
     }
 
+    /* Cabecera de cada apartado de la pantalla de pedido */
+    .apartado {
+        @apply mb-3 w-full border-b-2 border-borde pb-1.5 text-left text-[1.15rem] font-bold text-cafe;
+    }
+
+    .opciones {
+        @apply mb-5 flex w-full flex-col gap-3;
+    }
+
+    /* Aviso de "la última vez pediste..." */
+    .aviso {
+        @apply mb-5 w-full rounded-xl border-l-[5px] border-cafe bg-cafe-claro px-4 py-3.5 text-left text-[0.95rem];
+    }
+
+    .boton-suave {
+        @apply mt-2.5 cursor-pointer rounded-lg border-2 border-cafe bg-white px-3.5 py-2
+               text-[0.95rem] font-bold text-cafe transition-transform active:scale-[0.97];
+    }
+
     .campo {
         @apply mb-4 w-full rounded-xl border-2 border-borde bg-[#FAFAFA] px-5 py-4 text-base transition-all
                focus:border-cafe focus:bg-white focus:outline-none;
@@ -47,14 +66,14 @@
                transition-transform active:scale-[0.97] disabled:cursor-default;
     }
 
-    /* Opción de café: la etiqueta entera se resalta al marcar su radio */
-    .opcion-cafe {
+    /* Opción de café o de pincho: la etiqueta entera se resalta al marcar su radio */
+    .opcion {
         @apply flex cursor-pointer items-center rounded-xl border-2 border-borde bg-[#FAFAFA] px-5 py-[18px]
                text-[1.1rem] font-medium
                has-checked:border-cafe has-checked:bg-cafe-claro has-checked:text-cafe;
     }
 
-    .opcion-cafe input[type="radio"] {
+    .opcion input[type="radio"] {
         @apply mr-4 scale-[1.4] accent-cafe;
     }
 }

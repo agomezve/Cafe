@@ -1,4 +1,4 @@
-const CACHE = 'turno-cafe-v2';
+const CACHE = 'cafendo-v3';
 const ARCHIVOS = [
     'index.html',
     'app.html',

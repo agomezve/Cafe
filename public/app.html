@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pedido - SLCLAB Café</title>
+    <title>Pedido · Cafendo</title>
     <link rel="stylesheet" href="estilos.css">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icons/favicon.png">
@@ -11,23 +11,47 @@
     <meta name="theme-color" content="#6F4E37">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Turno Café">
+    <meta name="apple-mobile-web-app-title" content="Cafendo">
 </head>
 <body>
     <div class="tarjeta">
         <img src="logo-slclab.png" alt="SLCLAB" width="100" class="mb-2.5 max-w-full rounded-lg">
-        <h2 class="titulo">Hola <span id="nombreUsuario"></span>, elige tu café:</h2>
+        <h2 class="titulo">Hola <span id="nombreUsuario"></span>, ¿qué te pongo?</h2>
 
-        <div class="mb-5 flex w-full flex-col gap-3">
-            <label class="opcion-cafe"><input type="radio" name="cafe" value="Solo"> Café Solo</label>
-            <label class="opcion-cafe"><input type="radio" name="cafe" value="Con Leche"> Café con Leche</label>
-            <label class="opcion-cafe"><input type="radio" name="cafe" value="Cortado"> Cortado</label>
-            <label class="opcion-cafe"><input type="radio" name="cafe" value="Otro"> Otro</label>
+        <div id="avisoPreferencia" class="aviso hidden">
+            <p id="textoPreferencia"></p>
+            <button type="button" id="btnRepetir" class="boton-suave">Pedir lo mismo</button>
+        </div>
+
+        <h3 class="apartado">☕ Cafés y bebidas</h3>
+        <div class="opciones">
+            <label class="opcion"><input type="radio" name="cafe" value="Solo"> Café Solo</label>
+            <label class="opcion"><input type="radio" name="cafe" value="Con Leche"> Café con Leche</label>
+            <label class="opcion"><input type="radio" name="cafe" value="Cortado"> Cortado</label>
+            <label class="opcion"><input type="radio" name="cafe" value="Descafeinado"> Descafeinado</label>
+            <label class="opcion"><input type="radio" name="cafe" value="Otro"> Otro</label>
+            <label class="opcion"><input type="radio" name="cafe" value=""> Sin café (solo pincho)</label>
         </div>
 
         <input type="text" id="otroTexto" placeholder="¿Qué quieres tomar?" maxlength="40" class="campo hidden">
 
         <p id="hieloStatus" class="mb-2.5 min-h-[26px] text-center text-[1.1rem] text-hielo"></p>
+
+        <h3 class="apartado">🥘 Pinchos</h3>
+        <div class="opciones">
+            <label class="opcion"><input type="radio" name="pincho" value="" checked> Sin pincho</label>
+            <label class="opcion"><input type="radio" name="pincho" value="Patatas"> Patatas</label>
+            <label class="opcion"><input type="radio" name="pincho" value="Jeta"> Jeta</label>
+            <label class="opcion"><input type="radio" name="pincho" value="Gulas"> Gulas</label>
+            <label class="opcion"><input type="radio" name="pincho" value="Huevos rotos"> Huevos rotos</label>
+            <label class="opcion"><input type="radio" name="pincho" value="Lasaña"> Lasaña</label>
+            <label class="opcion"><input type="radio" name="pincho" value="Tortilla"> Tortilla</label>
+            <label class="opcion"><input type="radio" name="pincho" value="Bocadillo"> Bocadillo</label>
+            <label class="opcion"><input type="radio" name="pincho" value="Gambas rebozadas"> Gambas rebozadas</label>
+            <label class="opcion"><input type="radio" name="pincho" value="Otro"> Otro</label>
+        </div>
+
+        <input type="text" id="otroPinchoTexto" placeholder="¿Qué pincho quieres?" maxlength="40" class="campo hidden">
 
         <button id="btnGuardar" class="boton">Guardar Pedido</button>
         <p id="avisoTurno" class="mt-3 text-center text-[0.95rem] text-[#7a6a5f]"></p>

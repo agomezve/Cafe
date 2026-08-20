@@ -1,7 +1,7 @@
 {
-    "name": "Turno del Café - SLCLAB",
-    "short_name": "Turno Café",
-    "description": "Apunta tu café del turno en SLCLAB",
+    "name": "Cafendo",
+    "short_name": "Cafendo",
+    "description": "Apunta tu café y tu pincho del turno en SLCLAB",
     "start_url": "/index.html",
     "scope": "/",
     "display": "standalone",

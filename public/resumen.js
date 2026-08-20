@@ -20,6 +20,37 @@ function escapeHtml(texto) {
     }[c]));
 }
 
+const ICONOS_CAFE = { 'Con Leche': '🥛', 'Cortado': '🤏', 'Descafeinado': '🌙' };
+const ICONOS_PINCHO = {
+    'Patatas': '🥔', 'Jeta': '🐷', 'Gulas': '🍜', 'Huevos rotos': '🍳',
+    'Lasaña': '🍝', 'Tortilla': '🥚', 'Bocadillo': '🥪', 'Gambas rebozadas': '🍤',
+};
+
+// Cuenta cuántas veces se repite cada cosa, respetando el orden de llegada
+function contar(pedidos, campo) {
+    const conteo = {};
+    pedidos.forEach(pedido => {
+        const valor = pedido[campo];
+        if (!valor) return;
+        conteo[valor] = (conteo[valor] || 0) + 1;
+    });
+    return conteo;
+}
+
+function bloqueConteo(titulo, conteo, iconos, iconoPorDefecto, extra = '') {
+    const lineas = Object.entries(conteo)
+        .map(([nombre, cantidad]) =>
+            `<p>${iconos[nombre] || iconoPorDefecto} ${escapeHtml(nombre)}: <strong>x${cantidad}</strong></p>`)
+        .join('');
+
+    if (!lineas && !extra) return '';
+
+    return `<div class="mb-5 rounded-xl border-l-[5px] border-cafe bg-[#F9F6F0] p-5 text-left text-[1.2rem] leading-[1.8]">
+        <p class="mb-1.5 text-[0.95rem] font-bold tracking-wide text-cafe uppercase">${titulo}</p>
+        ${lineas}${extra}
+    </div>`;
+}
+
 async function cargarPedidos() {
     const response = await authFetch('/api/resumen');
     const pedidos = await response.json();
@@ -34,44 +65,34 @@ async function cargarPedidos() {
         return;
     }
 
-    total.innerText = `Total de cafés: ${pedidos.length}`;
+    const cafes = contar(pedidos, 'tipo_cafe');
+    const pinchos = contar(pedidos, 'pincho');
+    const totalCafes = Object.values(cafes).reduce((a, b) => a + b, 0);
+    const totalPinchos = Object.values(pinchos).reduce((a, b) => a + b, 0);
+    const totalHielos = pedidos.filter(pedido => pedido.hielo).length;
 
-    const conteoCafes = {};
-    let totalHielos = 0;
-    const nombres = [];
+    total.innerText = `${totalCafes} cafés · ${totalPinchos} pinchos`;
 
-    pedidos.forEach(pedido => {
-        const tipo = pedido.tipo_cafe;
-        conteoCafes[tipo] = (conteoCafes[tipo] || 0) + 1;
-
-        if (pedido.hielo) totalHielos++;
-
-        const extraHielo = pedido.hielo ? ' + Hielo' : '';
-        nombres.push(`${escapeHtml(pedido.usuario)} (${escapeHtml(pedido.tipo_cafe)}${extraHielo})`);
+    const nombres = pedidos.map(pedido => {
+        const partes = [];
+        if (pedido.tipo_cafe) partes.push(pedido.tipo_cafe + (pedido.hielo ? ' + Hielo' : ''));
+        if (pedido.pincho) partes.push(pedido.pincho);
+        return `${escapeHtml(pedido.usuario)} (${escapeHtml(partes.join(', '))})`;
     });
 
-    let htmlAgrupado = `<div class="mb-5 rounded-xl border-l-[5px] border-cafe bg-[#F9F6F0] p-5 text-left text-[1.2rem] leading-[1.8]">`;
+    const extraHielo = totalHielos > 0 ? `<p>🧊 Vasos de hielo: <strong>x${totalHielos}</strong></p>` : '';
 
-    for (const [tipo, cantidad] of Object.entries(conteoCafes)) {
-        let icono = '☕';
-        if (tipo === 'Con Leche') icono = '🥛';
-        if (tipo === 'Cortado') icono = '🤏';
-        htmlAgrupado += `<p>${icono} ${escapeHtml(tipo)}: <strong>x${cantidad}</strong></p>`;
-    }
-
-    if (totalHielos > 0) {
-        htmlAgrupado += `<p>🧊 Vasos de hielo: <strong>x${totalHielos}</strong></p>`;
-    }
-    htmlAgrupado += `</div>`;
-
-    let htmlNombres = `
+    const htmlNombres = `
         <div class="rounded-lg border border-dashed border-[#ccc] bg-white p-[15px] text-left text-base text-[#555]">
             <p class="mb-[5px] text-cafe"><strong>👤 Han pedido:</strong></p>
             <p><em>${nombres.join(', ')}</em></p>
         </div>
     `;
 
-    lista.innerHTML = htmlAgrupado + htmlNombres;
+    lista.innerHTML =
+        bloqueConteo('Cafés y bebidas', cafes, ICONOS_CAFE, '☕', extraHielo) +
+        bloqueConteo('Pinchos', pinchos, ICONOS_PINCHO, '🥘') +
+        htmlNombres;
 }
 
 document.getElementById('btnLimpiarTurno').addEventListener('click', async () => {
