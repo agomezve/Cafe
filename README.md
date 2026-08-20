@@ -37,6 +37,27 @@ Abre <http://localhost:3000>. No hace falta ninguna cuenta ni variable de
 entorno: si no hay `DATABASE_URL`, la app usa un Postgres embebido que se
 guarda en `data/` (carpeta que no se sube al repositorio).
 
+## Estilos (Tailwind CSS)
+
+Los estilos se escriben en `src/estilos.css` (Tailwind v4) y se compilan a
+`public/estilos.css`, que es el archivo que sirve la app y el que se sube al
+repositorio. Si tocas clases en el HTML/JS o el propio `src/estilos.css`,
+recompila:
+
+```bash
+npm run build:css
+```
+
+O déjalo recompilando solo mientras trabajas:
+
+```bash
+npm run watch:css
+```
+
+La paleta (café, crema, verde…) vive en el bloque `@theme` de
+`src/estilos.css`, y las piezas que se repiten en las tres pantallas
+(`.tarjeta`, `.boton`, `.campo`, `.opcion-cafe`) están en `@layer components`.
+
 ## Desplegarlo en Vercel (para que lo use todo el equipo)
 
 Necesitas tener [Vercel CLI](https://vercel.com/docs/cli) (se puede usar sin
@@ -99,10 +120,12 @@ turno-cafe/
 ├── api/index.js           punto de entrada para Vercel (funciones serverless)
 ├── vercel.json             enruta todas las peticiones a api/index.js
 ├── scripts/gen-icons.js    regenera los iconos si cambia el logo (usa "sharp")
+├── src/estilos.css         fuente de Tailwind (se compila a public/estilos.css)
 └── public/
     ├── index.html          login
     ├── app.html             pantalla del pedido
     ├── resumen.html          resumen del turno
+    ├── estilos.css           CSS compilado por Tailwind (no editar a mano)
     ├── auth.js               sesión, fetch autenticado y registro del service worker
     ├── acceso.js, app.js, resumen.js
     ├── sw.js                  caché para que cargue rápido e instalable

@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@source "../public";
+
+/* Paleta y tipografía del café, disponibles como utilidades (bg-cafe, text-tinta...) */
+@theme {
+    --color-cafe: #6F4E37;
+    --color-cafe-claro: #F4EFEB;
+    --color-crema: #F5F1E7;
+    --color-tinta: #3e2723;
+    --color-borde: #E0D8D0;
+    --color-verde: #4CAF50;
+    --color-rojo: #d32f2f;
+    --color-gris: #9e9e9e;
+    --color-pizarra: #607d8b;
+    --color-hielo: #0288d1;
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+@layer base {
+    body {
+        @apply flex min-h-screen justify-center bg-crema font-sans text-tinta;
+        -webkit-tap-highlight-color: transparent;
+    }
+}
+
+@layer components {
+    /* Tarjeta principal: a pantalla completa en el móvil, flotante en pantallas grandes */
+    .tarjeta {
+        @apply flex w-full max-w-[450px] min-h-screen flex-col items-center bg-white px-[25px] py-10
+               shadow-[0_4px_20px_rgba(0,0,0,0.05)]
+               min-[481px]:mt-[5vh] min-[481px]:min-h-auto min-[481px]:rounded-3xl min-[481px]:px-[30px];
+    }
+
+    .titulo {
+        @apply mb-6 text-center text-[1.4rem] font-bold;
+    }
+
+    .campo {
+        @apply mb-4 w-full rounded-xl border-2 border-borde bg-[#FAFAFA] px-5 py-4 text-base transition-all
+               focus:border-cafe focus:bg-white focus:outline-none;
+    }
+
+    .boton {
+        @apply mt-2.5 w-full cursor-pointer rounded-xl bg-cafe px-4 py-4 text-[1.1rem] font-bold text-white
+               transition-transform active:scale-[0.97] disabled:cursor-default;
+    }
+
+    /* Opción de café: la etiqueta entera se resalta al marcar su radio */
+    .opcion-cafe {
+        @apply flex cursor-pointer items-center rounded-xl border-2 border-borde bg-[#FAFAFA] px-5 py-[18px]
+               text-[1.1rem] font-medium
+               has-checked:border-cafe has-checked:bg-cafe-claro has-checked:text-cafe;
+    }
+
+    .opcion-cafe input[type="radio"] {
+        @apply mr-4 scale-[1.4] accent-cafe;
+    }
+}

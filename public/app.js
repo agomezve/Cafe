@@ -8,7 +8,7 @@ const inputOtro = document.getElementById('otroTexto');
 document.querySelectorAll('input[name="cafe"]').forEach(radio => {
     radio.addEventListener('change', (e) => {
         const esOtro = e.target.value === 'Otro';
-        inputOtro.style.display = esOtro ? 'block' : 'none';
+        inputOtro.classList.toggle('hidden', !esOtro);
 
         if (esOtro) {
             inputOtro.focus();
@@ -33,7 +33,7 @@ function revisarTurno() {
     const btn = document.getElementById('btnGuardar');
     btn.disabled = false;
     btn.innerText = 'Guardar Pedido';
-    btn.style.backgroundColor = '';
+    btn.classList.remove('bg-gris');
     document.getElementById('avisoTurno').innerText = 'Ha empezado un turno nuevo: ya puedes volver a pedir.';
 }
 
@@ -85,7 +85,7 @@ document.getElementById('btnGuardar').addEventListener('click', async () => {
         if (response.ok) {
             const datos = await response.json();
             alert("¡Pedido guardado correctamente! ☕");
-            btn.style.backgroundColor = "#ccc";
+            btn.classList.add('bg-gris');
             btn.innerText = "Pedido ya enviado";
             programarFinDeTurno(datos.msRestantes);
         } else {

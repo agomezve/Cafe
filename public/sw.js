@@ -1,4 +1,4 @@
-const CACHE = 'turno-cafe-v1';
+const CACHE = 'turno-cafe-v2';
 const ARCHIVOS = [
     'index.html',
     'app.html',

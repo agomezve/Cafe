@@ -6,7 +6,10 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "build": "npm run build:css",
+    "build:css": "tailwindcss -i ./src/estilos.css -o ./public/estilos.css --minify",
+    "watch:css": "tailwindcss -i ./src/estilos.css -o ./public/estilos.css --watch"
   },
   "engines": {
     "node": ">=22.5.0"
@@ -16,6 +19,8 @@
     "pg": "^8.23.0"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.5.5"
+    "@electric-sql/pglite": "^0.5.5",
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3"
   }
 }

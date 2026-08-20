@@ -29,7 +29,7 @@ async function cargarPedidos() {
     lista.innerHTML = '';
 
     if (pedidos.length === 0) {
-        lista.innerHTML = '<p style="text-align: center; color: #888;">No hay pedidos en este turno todavía.</p>';
+        lista.innerHTML = '<p class="text-center text-[#888]">No hay pedidos en este turno todavía.</p>';
         total.innerText = '';
         return;
     }
@@ -50,7 +50,7 @@ async function cargarPedidos() {
         nombres.push(`${escapeHtml(pedido.usuario)} (${escapeHtml(pedido.tipo_cafe)}${extraHielo})`);
     });
 
-    let htmlAgrupado = `<div style="background: #F9F6F0; padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 5px solid var(--primary-color); text-align: left; font-size: 1.2rem; line-height: 1.8;">`;
+    let htmlAgrupado = `<div class="mb-5 rounded-xl border-l-[5px] border-cafe bg-[#F9F6F0] p-5 text-left text-[1.2rem] leading-[1.8]">`;
 
     for (const [tipo, cantidad] of Object.entries(conteoCafes)) {
         let icono = '☕';
@@ -65,8 +65,8 @@ async function cargarPedidos() {
     htmlAgrupado += `</div>`;
 
     let htmlNombres = `
-        <div style="background: #ffffff; padding: 15px; border-radius: 8px; border: 1px dashed #ccc; text-align: left; font-size: 1rem; color: #555;">
-            <p style="margin-bottom: 5px; color: var(--primary-color);"><strong>👤 Han pedido:</strong></p>
+        <div class="rounded-lg border border-dashed border-[#ccc] bg-white p-[15px] text-left text-base text-[#555]">
+            <p class="mb-[5px] text-cafe"><strong>👤 Han pedido:</strong></p>
             <p><em>${nombres.join(', ')}</em></p>
         </div>
     `;

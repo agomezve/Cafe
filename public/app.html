@@ -14,26 +14,26 @@
     <meta name="apple-mobile-web-app-title" content="Turno Café">
 </head>
 <body>
-    <div class="app-container">
-        <img src="logo-slclab.png" alt="SLCLAB" width="100">
-        <h2>Hola <span id="nombreUsuario"></span>, elige tu café:</h2>
-        
-        <div class="cafe-options">
-            <label><input type="radio" name="cafe" value="Solo"> Café Solo</label>
-            <label><input type="radio" name="cafe" value="Con Leche"> Café con Leche</label>
-            <label><input type="radio" name="cafe" value="Cortado"> Cortado</label>
-            <label><input type="radio" name="cafe" value="Otro"> Otro</label>
+    <div class="tarjeta">
+        <img src="logo-slclab.png" alt="SLCLAB" width="100" class="mb-2.5 max-w-full rounded-lg">
+        <h2 class="titulo">Hola <span id="nombreUsuario"></span>, elige tu café:</h2>
+
+        <div class="mb-5 flex w-full flex-col gap-3">
+            <label class="opcion-cafe"><input type="radio" name="cafe" value="Solo"> Café Solo</label>
+            <label class="opcion-cafe"><input type="radio" name="cafe" value="Con Leche"> Café con Leche</label>
+            <label class="opcion-cafe"><input type="radio" name="cafe" value="Cortado"> Cortado</label>
+            <label class="opcion-cafe"><input type="radio" name="cafe" value="Otro"> Otro</label>
         </div>
 
-        <input type="text" id="otroTexto" placeholder="¿Qué quieres tomar?" maxlength="40" style="display:none;">
+        <input type="text" id="otroTexto" placeholder="¿Qué quieres tomar?" maxlength="40" class="campo hidden">
 
-        <p id="hieloStatus"></p>
-        
-        <button id="btnGuardar">Guardar Pedido</button>
-        <p id="avisoTurno"></p>
-        <hr>
-        <button id="btnResumen" style="background-color: var(--secondary-color);">Generar Resumen de este Turno</button>
-        <button id="btnCerrarSesion" style="background-color: #607d8b;">🚪 Cerrar Sesión</button>
+        <p id="hieloStatus" class="mb-2.5 min-h-[26px] text-center text-[1.1rem] text-hielo"></p>
+
+        <button id="btnGuardar" class="boton">Guardar Pedido</button>
+        <p id="avisoTurno" class="mt-3 text-center text-[0.95rem] text-[#7a6a5f]"></p>
+        <hr class="my-6 h-px w-full border-0 bg-borde">
+        <button id="btnResumen" class="boton bg-verde">Generar Resumen de este Turno</button>
+        <button id="btnCerrarSesion" class="boton bg-pizarra">🚪 Cerrar Sesión</button>
     </div>
     <script src="auth.js"></script>
     <script src="app.js"></script>
