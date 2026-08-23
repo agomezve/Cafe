@@ -4,6 +4,15 @@ if (getToken()) {
 
 const inputUsuario = document.getElementById('usuario');
 
+// El nombre de la última vez viene ya puesto: quien vuelve solo tiene que
+// darle a "Entrar". Si es otra persona, borra y escribe el suyo.
+inputUsuario.value = getUltimoUsuario();
+if (inputUsuario.value) {
+    document.getElementById('btnLogin').focus();
+} else {
+    inputUsuario.focus();
+}
+
 async function entrar() {
     const btn = document.getElementById('btnLogin');
     const usuario = inputUsuario.value.trim();

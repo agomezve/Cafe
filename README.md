@@ -10,7 +10,9 @@ oficina y sin depender de que un ordenador esté encendido.
 
 1. **Login**: cada persona entra solo con su nombre, sin contraseña. El
    servidor devuelve un token firmado que se guarda en el móvil, así no hay
-   que volver a entrar cada día (dura 30 días).
+   que volver a entrar cada día (dura 30 días). El nombre se queda guardado
+   aunque cierres sesión: la próxima vez el campo sale ya escrito y basta con
+   darle a "Entrar" (si entra otra persona, lo borra y pone el suyo).
 2. **Elegir bar**: la primera pantalla es "Elige bar:" con los bares a los que
    baja el laboratorio (ahora mismo **Verssache** y **Petit Prince**). Cada bar
    tiene su carta, y el resumen y las preferencias van por bar.

@@ -16,8 +16,16 @@ function getBar() {
     return localStorage.getItem('bar');
 }
 
+// El último nombre con el que se entró. A diferencia de "usuario", este no se
+// borra al cerrar sesión: sirve para que el login salga ya escrito y no haya
+// que teclear el nombre cada vez.
+function getUltimoUsuario() {
+    return localStorage.getItem('ultimoUsuario') || '';
+}
+
 function guardarSesion(nombre, token) {
     localStorage.setItem('usuario', nombre);
+    localStorage.setItem('ultimoUsuario', nombre);
     localStorage.setItem('token', token);
 }
 
@@ -27,7 +35,14 @@ function guardarBar(id) {
     localStorage.setItem('bar', id);
 }
 
+// Cierra la sesión, pero no olvida el nombre: al volver a entrar ya está
+// escrito y basta con darle a "Entrar". Se apunta aquí también (y no solo al
+// entrar) por las sesiones que ya estaban abiertas en los móviles antes de
+// que esto existiera: si no, perderían el nombre una vez.
 function cerrarSesion() {
+    const nombre = getUsuario();
+    if (nombre) localStorage.setItem('ultimoUsuario', nombre);
+
     localStorage.removeItem('usuario');
     localStorage.removeItem('token');
     localStorage.removeItem('bar');
