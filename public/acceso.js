@@ -1,14 +1,15 @@
 if (getToken()) {
-    window.location.href = 'app.html';
+    window.location.href = 'bares.html';
 }
 
-document.getElementById('btnLogin').addEventListener('click', async () => {
-    const btn = document.getElementById('btnLogin');
-    const usuario = document.getElementById('usuario').value.trim();
-    const password = document.getElementById('password').value.trim();
+const inputUsuario = document.getElementById('usuario');
 
-    if (!usuario || !password) {
-        alert('Por favor, rellena todos los campos.');
+async function entrar() {
+    const btn = document.getElementById('btnLogin');
+    const usuario = inputUsuario.value.trim();
+
+    if (!usuario) {
+        alert('Escribe tu nombre.');
         return;
     }
 
@@ -17,20 +18,27 @@ document.getElementById('btnLogin').addEventListener('click', async () => {
         const response = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ usuario, password })
+            body: JSON.stringify({ usuario })
         });
 
         const data = await response.json();
 
         if (data.success) {
             guardarSesion(data.nombre, data.token);
-            window.location.href = 'app.html';
+            window.location.href = 'bares.html';
         } else {
-            alert(data.message || 'Usuario o contraseña incorrectos.');
+            alert(data.message || 'Ese nombre no está en la lista.');
         }
     } catch (err) {
         alert('No se pudo conectar con el servidor. Revisa tu conexión.');
     } finally {
         btn.disabled = false;
     }
+}
+
+document.getElementById('btnLogin').addEventListener('click', entrar);
+
+// En el móvil el teclado enseña "Ir": que sirva para entrar
+inputUsuario.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') entrar();
 });

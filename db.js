@@ -21,6 +21,9 @@ if (DATABASE_URL) {
     // Desarrollo local sin credenciales en la nube: Postgres embebido en disco
     const { PGlite } = require('@electric-sql/pglite');
     const dataDir = path.join(__dirname, 'data', 'pglite');
+    // PGlite crea su propia carpeta, pero no la de arriba: en un clon recién
+    // bajado (data/ no está en el repositorio) fallaría al arrancar.
+    require('fs').mkdirSync(path.dirname(dataDir), { recursive: true });
     const pglite = new PGlite(dataDir);
     queryImpl = async (text, params = []) => {
         const resultado = await pglite.query(text, params);
@@ -40,16 +43,37 @@ const SQL_BORRAR_CADUCADOS =
 const ESQUEMA = [
     `CREATE TABLE IF NOT EXISTS usuarios (
         id SERIAL PRIMARY KEY,
-        nombre TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL
+        nombre TEXT UNIQUE NOT NULL
     )`,
+    // Ya no hay contraseña: se entra solo con el nombre. Si la base de datos
+    // viene del esquema anterior, la columna sobra.
+    `ALTER TABLE usuarios DROP COLUMN IF EXISTS password`,
+    // Un pedido = una persona, un bar y un momento. Lo que se pide de verdad
+    // (que ahora pueden ser varias bebidas y varios pinchos) va en pedido_items.
     `CREATE TABLE IF NOT EXISTS pedidos (
         id SERIAL PRIMARY KEY,
         usuario TEXT NOT NULL REFERENCES usuarios(nombre) ON DELETE CASCADE,
-        tipo_cafe TEXT NOT NULL,
-        hielo BOOLEAN NOT NULL DEFAULT FALSE,
+        bar TEXT,
         creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
     )`,
+    // Migración del esquema anterior, en el que el pedido era una sola bebida
+    // y un solo pincho en columnas de esta misma tabla.
+    `ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS bar TEXT`,
+    `ALTER TABLE pedidos DROP COLUMN IF EXISTS tipo_cafe`,
+    `ALTER TABLE pedidos DROP COLUMN IF EXISTS hielo`,
+    `ALTER TABLE pedidos DROP COLUMN IF EXISTS pincho`,
+    `ALTER TABLE pedidos DROP CONSTRAINT IF EXISTS pedidos_usuario_fecha_key`,
+    `ALTER TABLE pedidos DROP COLUMN IF EXISTS fecha`,
+    // Pedidos viejos sin bar: son de un turno ya pasado, no hay nada que salvar
+    `DELETE FROM pedidos WHERE bar IS NULL`,
+    `CREATE TABLE IF NOT EXISTS pedido_items (
+        id SERIAL PRIMARY KEY,
+        pedido_id INTEGER NOT NULL REFERENCES pedidos(id) ON DELETE CASCADE,
+        clase TEXT NOT NULL,
+        nombre TEXT NOT NULL,
+        hielo BOOLEAN NOT NULL DEFAULT FALSE
+    )`,
+    `CREATE INDEX IF NOT EXISTS pedido_items_pedido ON pedido_items (pedido_id)`,
     // Ajustes internos del servidor. Guarda el secreto que firma las sesiones
     // para que todas las instancias de Vercel usen el mismo: si cada una se
     // inventa el suyo, el token que da el login lo rechaza la siguiente.
@@ -57,35 +81,31 @@ const ESQUEMA = [
         clave TEXT PRIMARY KEY,
         valor TEXT NOT NULL
     )`,
-    // Lo último que pidió cada uno, para poder ofrecérselo otro día. A
-    // diferencia de "pedidos", esto no caduca.
-    `CREATE TABLE IF NOT EXISTS preferencias (
-        usuario TEXT PRIMARY KEY REFERENCES usuarios(nombre) ON DELETE CASCADE,
-        tipo_cafe TEXT,
-        hielo BOOLEAN NOT NULL DEFAULT FALSE,
-        pincho TEXT,
-        actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+    // La preferencia pasa a ser por bar: lo que pides en el Petit Prince no
+    // tiene por qué ser lo que pides en el Verssache. La tabla antigua no
+    // sabía de bares, así que no se puede migrar: se rehace sola con el
+    // primer pedido de cada uno.
+    `DROP TABLE IF EXISTS preferencias`,
+    `CREATE TABLE IF NOT EXISTS preferencias_bar (
+        usuario TEXT NOT NULL REFERENCES usuarios(nombre) ON DELETE CASCADE,
+        bar TEXT NOT NULL,
+        items TEXT NOT NULL,
+        actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
+        PRIMARY KEY (usuario, bar)
     )`,
-    // El pedido pasa a llevar también pincho, y se puede pedir solo una cosa
-    // de las dos (café sin pincho o pincho sin café).
-    `ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS pincho TEXT`,
-    `ALTER TABLE pedidos ALTER COLUMN tipo_cafe DROP NOT NULL`,
-    // Migración del esquema anterior (un pedido por persona y día). Ahora los
-    // pedidos caducan solos, así que la unicidad pasa a ser solo por persona:
-    // mientras tu pedido siga vivo no puedes pedir otro, y al caducar sí.
-    `ALTER TABLE pedidos DROP CONSTRAINT IF EXISTS pedidos_usuario_fecha_key`,
-    `ALTER TABLE pedidos DROP COLUMN IF EXISTS fecha`,
     SQL_BORRAR_CADUCADOS,
-    `CREATE UNIQUE INDEX IF NOT EXISTS pedidos_usuario_unico ON pedidos (usuario)`,
+    // La unicidad ahora es por persona y bar: mientras tu pedido siga vivo no
+    // puedes pedir otro en ese bar, y al caducar sí.
+    `DROP INDEX IF EXISTS pedidos_usuario_unico`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS pedidos_usuario_bar_unico ON pedidos (usuario, bar)`,
 ];
 
-// Los 18 empleados con contraseña común inicial (se puede cambiar por fila en la tabla usuarios)
+// Los 18 empleados. Para entrar basta con el nombre.
 const USUARIOS_INICIALES = [
     'Aaron', 'Adrian', 'Alberto', 'Alvaro', 'Angel', 'Christian',
     'Cristian', 'Cristina', 'Diego', 'Jorge', 'Jose', 'Juan Carlos',
     'Julio', 'Marcos', 'Pedro', 'Roberto', 'Santos', 'Susana',
 ];
-const PASSWORD_INICIAL = process.env.CAFE_PASSWORD_INICIAL || 'labAlfa21';
 
 let listo;
 function init() {
@@ -96,8 +116,8 @@ function init() {
             }
             for (const nombre of USUARIOS_INICIALES) {
                 await queryImpl(
-                    `INSERT INTO usuarios (nombre, password) VALUES ($1, $2) ON CONFLICT (nombre) DO NOTHING`,
-                    [nombre, PASSWORD_INICIAL]
+                    `INSERT INTO usuarios (nombre) VALUES ($1) ON CONFLICT (nombre) DO NOTHING`,
+                    [nombre]
                 );
             }
         })();

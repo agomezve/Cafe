@@ -18,39 +18,27 @@
         <img src="logo-slclab.png" alt="SLCLAB" width="100" class="mb-2.5 max-w-full rounded-lg">
         <h2 class="titulo">Hola <span id="nombreUsuario"></span>, ¿qué te pongo?</h2>
 
+        <p class="mb-5 w-full text-center text-[0.95rem] text-[#7a6a5f]">
+            Bar: <strong id="nombreBar" class="text-cafe"></strong>
+            <button type="button" id="btnCambiarBar" class="ml-1.5 underline">cambiar</button>
+        </p>
+
         <div id="avisoPreferencia" class="aviso hidden">
             <p id="textoPreferencia"></p>
-            <button type="button" id="btnRepetir" class="boton-suave">Pedir lo mismo</button>
+            <div class="mt-2.5 flex gap-2.5">
+                <button type="button" id="btnRepetirSi" class="boton-suave">Sí, lo mismo</button>
+                <button type="button" id="btnRepetirNo" class="boton-suave">No, elijo otra cosa</button>
+            </div>
         </div>
 
         <h3 class="apartado">☕ Cafés y bebidas</h3>
-        <div class="opciones">
-            <label class="opcion"><input type="radio" name="cafe" value="Solo"> Café Solo</label>
-            <label class="opcion"><input type="radio" name="cafe" value="Con Leche"> Café con Leche</label>
-            <label class="opcion"><input type="radio" name="cafe" value="Cortado"> Cortado</label>
-            <label class="opcion"><input type="radio" name="cafe" value="Descafeinado"> Descafeinado</label>
-            <label class="opcion"><input type="radio" name="cafe" value="Otro"> Otro</label>
-            <label class="opcion"><input type="radio" name="cafe" value=""> Sin café (solo pincho)</label>
-        </div>
-
+        <p class="pista">Puedes marcar varias.</p>
+        <div id="listaBebidas" class="opciones"></div>
         <input type="text" id="otroTexto" placeholder="¿Qué quieres tomar?" maxlength="40" class="campo hidden">
 
-        <p id="hieloStatus" class="mb-2.5 min-h-[26px] text-center text-[1.1rem] text-hielo"></p>
-
         <h3 class="apartado">🥘 Pinchos</h3>
-        <div class="opciones">
-            <label class="opcion"><input type="radio" name="pincho" value="" checked> Sin pincho</label>
-            <label class="opcion"><input type="radio" name="pincho" value="Patatas"> Patatas</label>
-            <label class="opcion"><input type="radio" name="pincho" value="Jeta"> Jeta</label>
-            <label class="opcion"><input type="radio" name="pincho" value="Gulas"> Gulas</label>
-            <label class="opcion"><input type="radio" name="pincho" value="Huevos rotos"> Huevos rotos</label>
-            <label class="opcion"><input type="radio" name="pincho" value="Lasaña"> Lasaña</label>
-            <label class="opcion"><input type="radio" name="pincho" value="Tortilla"> Tortilla</label>
-            <label class="opcion"><input type="radio" name="pincho" value="Bocadillo"> Bocadillo</label>
-            <label class="opcion"><input type="radio" name="pincho" value="Gambas rebozadas"> Gambas rebozadas</label>
-            <label class="opcion"><input type="radio" name="pincho" value="Otro"> Otro</label>
-        </div>
-
+        <p class="pista">Puedes marcar varios.</p>
+        <div id="listaPinchos" class="opciones"></div>
         <input type="text" id="otroPinchoTexto" placeholder="¿Qué pincho quieres?" maxlength="40" class="campo hidden">
 
         <button id="btnGuardar" class="boton">Guardar Pedido</button>
@@ -59,6 +47,7 @@
         <button id="btnResumen" class="boton bg-verde">Generar Resumen de este Turno</button>
         <button id="btnCerrarSesion" class="boton bg-pizarra">🚪 Cerrar Sesión</button>
     </div>
+    <script src="catalogo.js"></script>
     <script src="auth.js"></script>
     <script src="app.js"></script>
 </body>

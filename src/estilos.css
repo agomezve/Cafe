@@ -66,14 +66,48 @@
                transition-transform active:scale-[0.97] disabled:cursor-default;
     }
 
-    /* Opción de café o de pincho: la etiqueta entera se resalta al marcar su radio */
-    .opcion {
-        @apply flex cursor-pointer items-center rounded-xl border-2 border-borde bg-[#FAFAFA] px-5 py-[18px]
-               text-[1.1rem] font-medium
-               has-checked:border-cafe has-checked:bg-cafe-claro has-checked:text-cafe;
+    /* Botón de cada bar en la pantalla de elegir */
+    .boton-bar {
+        @apply w-full cursor-pointer rounded-xl border-2 border-cafe bg-white px-5 py-[22px]
+               text-[1.25rem] font-bold text-cafe transition-transform active:scale-[0.97];
     }
 
-    .opcion input[type="radio"] {
+    /* "Puedes marcar varias" y demás letra pequeña de un apartado */
+    .pista {
+        @apply -mt-1.5 mb-3 w-full text-left text-[0.85rem] text-[#8a7a6f];
+    }
+
+    /* Opción de bebida o de pincho: la fila entera se resalta al marcarla.
+       Se marcan varias, así que son casillas, no botones de radio. */
+    .opcion {
+        @apply flex w-full items-center gap-2 rounded-xl border-2 border-borde bg-[#FAFAFA] px-5 py-[18px]
+               text-[1.1rem] font-medium;
+    }
+
+    /* Solo cuenta la casilla de la propia opción: la del hielo va aparte */
+    .opcion:has(.marca:checked) {
+        @apply border-cafe bg-cafe-claro text-cafe;
+    }
+
+    .opcion-etiqueta {
+        @apply flex flex-1 cursor-pointer items-center;
+    }
+
+    .opcion-etiqueta input[type="checkbox"] {
         @apply mr-4 scale-[1.4] accent-cafe;
+    }
+
+    /* Hielo: aparece pegado a la bebida en cuanto se marca */
+    .hielo-toggle {
+        @apply flex shrink-0 cursor-pointer items-center rounded-lg border-2 border-borde bg-white
+               px-2.5 py-1.5 text-[0.95rem] text-hielo;
+    }
+
+    .hielo-toggle input[type="checkbox"] {
+        @apply mr-1.5 scale-[1.2] accent-hielo;
+    }
+
+    .hielo-toggle:has(input:checked) {
+        @apply border-hielo;
     }
 }

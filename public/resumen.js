@@ -1,4 +1,7 @@
 exigirSesion();
+const bar = exigirBar();
+
+document.getElementById('nombreBar').innerText = bar.nombre;
 
 document.addEventListener('DOMContentLoaded', async () => {
     cargarPedidos();
@@ -20,27 +23,24 @@ function escapeHtml(texto) {
     }[c]));
 }
 
-const ICONOS_CAFE = { 'Con Leche': '🥛', 'Cortado': '🤏', 'Descafeinado': '🌙' };
-const ICONOS_PINCHO = {
-    'Patatas': '🥔', 'Jeta': '🐷', 'Gulas': '🍜', 'Huevos rotos': '🍳',
-    'Lasaña': '🍝', 'Tortilla': '🥚', 'Bocadillo': '🥪', 'Gambas rebozadas': '🍤',
-};
-
-// Cuenta cuántas veces se repite cada cosa, respetando el orden de llegada
-function contar(pedidos, campo) {
+// Cuenta cuántas veces se repite cada cosa de un apartado, respetando el orden
+// de llegada
+function contar(pedidos, clase) {
     const conteo = {};
     pedidos.forEach(pedido => {
-        const valor = pedido[campo];
-        if (!valor) return;
-        conteo[valor] = (conteo[valor] || 0) + 1;
+        pedido.items
+            .filter(item => item.clase === clase)
+            .forEach(item => {
+                conteo[item.nombre] = (conteo[item.nombre] || 0) + 1;
+            });
     });
     return conteo;
 }
 
-function bloqueConteo(titulo, conteo, iconos, iconoPorDefecto, extra = '') {
+function bloqueConteo(titulo, conteo, iconoPorDefecto, extra = '') {
     const lineas = Object.entries(conteo)
         .map(([nombre, cantidad]) =>
-            `<p>${iconos[nombre] || iconoPorDefecto} ${escapeHtml(nombre)}: <strong>x${cantidad}</strong></p>`)
+            `<p>${CATALOGO.icono(nombre, iconoPorDefecto)} ${escapeHtml(CATALOGO.etiqueta(nombre))}: <strong>x${cantidad}</strong></p>`)
         .join('');
 
     if (!lineas && !extra) return '';
@@ -52,7 +52,7 @@ function bloqueConteo(titulo, conteo, iconos, iconoPorDefecto, extra = '') {
 }
 
 async function cargarPedidos() {
-    const response = await authFetch('/api/resumen');
+    const response = await authFetch(`/api/resumen?bar=${encodeURIComponent(bar.id)}`);
     const pedidos = await response.json();
     const lista = document.getElementById('listaPedidos');
     const total = document.getElementById('totalPedidos');
@@ -65,18 +65,18 @@ async function cargarPedidos() {
         return;
     }
 
-    const cafes = contar(pedidos, 'tipo_cafe');
+    const bebidas = contar(pedidos, 'bebida');
     const pinchos = contar(pedidos, 'pincho');
-    const totalCafes = Object.values(cafes).reduce((a, b) => a + b, 0);
+    const totalBebidas = Object.values(bebidas).reduce((a, b) => a + b, 0);
     const totalPinchos = Object.values(pinchos).reduce((a, b) => a + b, 0);
-    const totalHielos = pedidos.filter(pedido => pedido.hielo).length;
+    const totalHielos = pedidos.reduce(
+        (suma, pedido) => suma + pedido.items.filter(item => item.hielo).length, 0);
 
-    total.innerText = `${totalCafes} cafés · ${totalPinchos} pinchos`;
+    total.innerText = `${totalBebidas} bebidas · ${totalPinchos} pinchos`;
 
     const nombres = pedidos.map(pedido => {
-        const partes = [];
-        if (pedido.tipo_cafe) partes.push(pedido.tipo_cafe + (pedido.hielo ? ' + Hielo' : ''));
-        if (pedido.pincho) partes.push(pedido.pincho);
+        const partes = pedido.items.map(item =>
+            CATALOGO.etiqueta(item.nombre) + (item.hielo ? ' + Hielo' : ''));
         return `${escapeHtml(pedido.usuario)} (${escapeHtml(partes.join(', '))})`;
     });
 
@@ -90,14 +90,14 @@ async function cargarPedidos() {
     `;
 
     lista.innerHTML =
-        bloqueConteo('Cafés y bebidas', cafes, ICONOS_CAFE, '☕', extraHielo) +
-        bloqueConteo('Pinchos', pinchos, ICONOS_PINCHO, '🥘') +
+        bloqueConteo('Cafés y bebidas', bebidas, '☕', extraHielo) +
+        bloqueConteo('Pinchos', pinchos, '🥘') +
         htmlNombres;
 }
 
 document.getElementById('btnLimpiarTurno').addEventListener('click', async () => {
-    if (confirm("¿Seguro que quieres borrar todos los pedidos para empezar un nuevo turno?")) {
-        await authFetch('/api/pedidos', { method: 'DELETE' });
+    if (confirm(`¿Seguro que quieres borrar todos los pedidos del ${bar.nombre} para empezar un nuevo turno?`)) {
+        await authFetch(`/api/pedidos?bar=${encodeURIComponent(bar.id)}`, { method: 'DELETE' });
         cargarPedidos();
     }
 });

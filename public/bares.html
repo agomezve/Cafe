@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cafendo</title>
+    <title>Elige bar · Cafendo</title>
     <link rel="stylesheet" href="estilos.css">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icons/favicon.png">
@@ -15,16 +15,15 @@
 </head>
 <body>
     <div class="tarjeta">
-        <img src="logo-slclab.png" alt="SLCLAB Logo" width="150" class="mb-2.5 max-w-full rounded-lg">
-        <img src="logo-cafe.jpg" alt="Café Logo" width="100" class="mb-2.5 max-w-full rounded-lg">
-        <h2 class="titulo">Cafendo</h2>
+        <img src="logo-slclab.png" alt="SLCLAB" width="100" class="mb-2.5 max-w-full rounded-lg">
+        <h2 class="titulo">Elige bar:</h2>
 
-        <input type="text" id="usuario" placeholder="Tu nombre" autocomplete="username"
-               autocapitalize="words" class="campo">
-        <button id="btnLogin" class="boton">Entrar</button>
+        <div id="listaBares" class="opciones"></div>
+
+        <button id="btnCerrarSesion" class="boton bg-pizarra">🚪 Cerrar Sesión</button>
     </div>
     <script src="catalogo.js"></script>
     <script src="auth.js"></script>
-    <script src="acceso.js"></script>
+    <script src="bares.js"></script>
 </body>
 </html>
