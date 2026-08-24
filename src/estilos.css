@@ -66,12 +66,6 @@
                transition-transform active:scale-[0.97] disabled:cursor-default;
     }
 
-    /* Botón de cada bar en la pantalla de elegir */
-    .boton-bar {
-        @apply w-full cursor-pointer rounded-xl border-2 border-cafe bg-white px-5 py-[22px]
-               text-[1.25rem] font-bold text-cafe transition-transform active:scale-[0.97];
-    }
-
     /* "Puedes marcar varias" y demás letra pequeña de un apartado */
     .pista {
         @apply -mt-1.5 mb-3 w-full text-left text-[0.85rem] text-[#8a7a6f];

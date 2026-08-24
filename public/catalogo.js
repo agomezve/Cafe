@@ -1,35 +1,22 @@
-// Catálogo de bares, bebidas y pinchos.
+// Catálogo de bebidas y pinchos.
 //
 // Este archivo lo cargan las dos partes: el navegador con
 // <script src="catalogo.js"> (deja `CATALOGO` como global) y el servidor con
 // require('./public/catalogo'). Así la lista que se pinta en la pantalla y la
-// que valida el servidor son literalmente la misma, y añadir un bar nuevo es
-// tocar solo aquí.
+// que valida el servidor son literalmente la misma, y añadir algo a la carta
+// es tocar solo aquí.
 
-const BEBIDAS_BASE = ['Solo', 'Con Leche', 'Cortado', 'Descafeinado', 'Mosto'];
+// Solo los cafés admiten hielo: al Mosto y al Colacao no se les pregunta
+const CAFES = ['Solo', 'Con Leche', 'Cortado', 'Descafeinado'];
 
-const PINCHOS_BASE = [
+const BEBIDAS = [...CAFES, 'Mosto', 'Colacao'];
+
+// Todos los pinchos juntos, sin repetir: ya no se elige bar, así que la carta
+// es la suma de lo que había en cada uno.
+const PINCHOS = [
     'Patatas', 'Jeta', 'Gulas', 'Huevos rotos',
     'Lasaña', 'Tortilla', 'Bocadillo', 'Gambas rebozadas',
-];
-
-const sin = (lista, ...fuera) => lista.filter(nombre => !fuera.includes(nombre));
-
-// De momento todos los bares tienen la misma carta salvo sus rarezas. Cuando
-// se añadan más bares, basta con meterlos en esta lista.
-const BARES = [
-    {
-        id: 'verssache',
-        nombre: 'Verssache',
-        bebidas: BEBIDAS_BASE,
-        pinchos: [...sin(PINCHOS_BASE, 'Gambas rebozadas'), 'Sandwich'],
-    },
-    {
-        id: 'petit-prince',
-        nombre: 'Petit Prince',
-        bebidas: BEBIDAS_BASE,
-        pinchos: sin(PINCHOS_BASE, 'Lasaña'),
-    },
+    'Sandwich', 'Empanadilla', 'Croissant', 'Rabas', 'Bacalao',
 ];
 
 // Lo que se lee en pantalla cuando el nombre corto se queda escueto
@@ -39,10 +26,12 @@ const ETIQUETAS = {
 };
 
 const ICONOS = {
-    'Solo': '☕', 'Con Leche': '🥛', 'Cortado': '🤏', 'Descafeinado': '🌙', 'Mosto': '🍇',
+    'Solo': '☕', 'Con Leche': '🥛', 'Cortado': '🤏', 'Descafeinado': '🌙',
+    'Mosto': '🍇', 'Colacao': '🍫',
     'Patatas': '🥔', 'Jeta': '🐷', 'Gulas': '🍜', 'Huevos rotos': '🍳',
     'Lasaña': '🍝', 'Tortilla': '🥚', 'Bocadillo': '🥪', 'Gambas rebozadas': '🍤',
-    'Sandwich': '🍞',
+    'Sandwich': '🍞', 'Empanadilla': '🥟', 'Croissant': '🥐', 'Rabas': '🦑',
+    'Bacalao': '🐟',
 };
 
 // Texto libre de la opción "Otro": corto, que esto acaba en una lista para leer
@@ -54,17 +43,21 @@ const MAX_LONGITUD_OTRO = 40;
 const MAX_ITEMS = 12;
 
 const CATALOGO = {
-    bares: BARES,
+    bebidas: BEBIDAS,
+    pinchos: PINCHOS,
     maxLongitudOtro: MAX_LONGITUD_OTRO,
     maxItems: MAX_ITEMS,
 
-    barPorId(id) {
-        return BARES.find(bar => bar.id === String(id || '')) || null;
+    // Lista de un apartado ('bebida' o 'pincho')
+    carta(clase) {
+        return clase === 'bebida' ? BEBIDAS : PINCHOS;
     },
 
-    // Lista del bar para un apartado ('bebida' o 'pincho')
-    carta(bar, clase) {
-        return clase === 'bebida' ? bar.bebidas : bar.pinchos;
+    // El hielo solo se ofrece en los cafés de la carta. En "Otro" tampoco: no
+    // se sabe qué es. Lo usan la pantalla (para enseñar la casilla) y el
+    // servidor (para no fiarse de lo que llegue).
+    admiteHielo(clase, nombre) {
+        return clase === 'bebida' && CAFES.includes(nombre);
     },
 
     etiqueta(nombre) {

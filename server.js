@@ -8,10 +8,10 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Admite lo que hay en la carta del bar o, para "Otro", cualquier texto corto.
-// Se queda con las cosas válidas y descarta el resto: lo que no vale es que no
+// Admite lo que hay en la carta o, para "Otro", cualquier texto corto. Se
+// queda con las cosas válidas y descarta el resto: lo que no vale es que no
 // quede nada.
-function normalizarItems(bar, items) {
+function normalizarItems(items) {
     if (!Array.isArray(items)) return [];
 
     const vistos = new Set();
@@ -28,12 +28,11 @@ function normalizarItems(bar, items) {
         if (vistos.has(clave)) continue;
         vistos.add(clave);
 
-        // El hielo solo se ofrece en las bebidas de la carta; en "Otro" no se pregunta
-        const deLaCarta = catalogo.carta(bar, item.clase).includes(nombre);
         salida.push({
             clase: item.clase,
             nombre,
-            hielo: item.clase === 'bebida' && deLaCarta && Boolean(item.hielo),
+            // El hielo solo vale en los cafés de la carta, venga lo que venga
+            hielo: catalogo.admiteHielo(item.clase, nombre) && Boolean(item.hielo),
         });
     }
 
@@ -107,11 +106,6 @@ async function requireAuth(req, res, next) {
     next();
 }
 
-// El bar llega en el cuerpo (al pedir) o en la query (al consultar)
-function barDePeticion(req) {
-    return catalogo.barPorId(req.body?.bar ?? req.query.bar);
-}
-
 // Login: solo el nombre. Esto no guarda nada sensible, sirve para saber quién
 // quiere cortado; la contraseña común solo estorbaba.
 app.post('/api/login', async (req, res) => {
@@ -138,17 +132,13 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// Lo último que pidió esta persona EN ESTE BAR, para poder ofrecérselo si
-// vuelve otro día. Lo que pides en un bar no dice nada de lo que pides en otro.
+// Lo último que pidió esta persona, para poder ofrecérselo si vuelve otro día
 app.get('/api/preferencia', requireAuth, async (req, res) => {
-    const bar = barDePeticion(req);
-    if (!bar) return res.status(400).json({ error: 'Bar desconocido.' });
-
     try {
         const { rows } = await db.query(
             `SELECT items, (actualizado_en < CURRENT_DATE) AS de_otro_dia
-             FROM preferencias_bar WHERE usuario = $1 AND bar = $2`,
-            [req.usuario, bar.id]
+             FROM preferencias_usuario WHERE usuario = $1`,
+            [req.usuario]
         );
 
         if (rows.length === 0) return res.json({ hay: false });
@@ -163,13 +153,10 @@ app.get('/api/preferencia', requireAuth, async (req, res) => {
     }
 });
 
-// Guardar pedido (uno por persona y bar mientras dure el turno; el índice
-// único bloquea los duplicados de forma atómica aunque lleguen dos a la vez)
+// Guardar pedido (uno por persona mientras dure el turno; el índice único
+// bloquea los duplicados de forma atómica aunque lleguen dos a la vez)
 app.post('/api/pedidos', requireAuth, async (req, res) => {
-    const bar = barDePeticion(req);
-    if (!bar) return res.status(400).json({ error: 'Elige un bar antes de pedir.' });
-
-    const items = normalizarItems(bar, req.body.items);
+    const items = normalizarItems(req.body.items);
     if (items.length === 0) {
         return res.status(400).json({ error: 'Elige al menos una bebida o un pincho.' });
     }
@@ -178,18 +165,18 @@ app.post('/api/pedidos', requireAuth, async (req, res) => {
         await db.limpiarPedidosCaducados();
 
         const { rows } = await db.query(
-            `INSERT INTO pedidos (usuario, bar)
-             VALUES ($1, $2)
-             ON CONFLICT (usuario, bar) DO NOTHING
+            `INSERT INTO pedidos (usuario)
+             VALUES ($1)
+             ON CONFLICT (usuario) DO NOTHING
              RETURNING id`,
-            [req.usuario, bar.id]
+            [req.usuario]
         );
 
         if (rows.length === 0) {
             const { rows: pendientes } = await db.query(
-                `SELECT CEIL(EXTRACT(EPOCH FROM (creado_en + ($3::int * INTERVAL '1 minute') - now())) / 60)::int AS minutos
-                 FROM pedidos WHERE usuario = $1 AND bar = $2`,
-                [req.usuario, bar.id, db.MINUTOS_TURNO]
+                `SELECT CEIL(EXTRACT(EPOCH FROM (creado_en + ($2::int * INTERVAL '1 minute') - now())) / 60)::int AS minutos
+                 FROM pedidos WHERE usuario = $1`,
+                [req.usuario, db.MINUTOS_TURNO]
             );
             const minutos = pendientes[0] ? Math.max(1, pendientes[0].minutos) : db.MINUTOS_TURNO;
             return res.status(400).json({
@@ -221,12 +208,12 @@ app.post('/api/pedidos', requireAuth, async (req, res) => {
         // no se rompe el pedido, que es lo que de verdad importa.
         try {
             await db.query(
-                `INSERT INTO preferencias_bar (usuario, bar, items, actualizado_en)
-                 VALUES ($1, $2, $3, now())
-                 ON CONFLICT (usuario, bar) DO UPDATE
+                `INSERT INTO preferencias_usuario (usuario, items, actualizado_en)
+                 VALUES ($1, $2, now())
+                 ON CONFLICT (usuario) DO UPDATE
                  SET items = EXCLUDED.items,
                      actualizado_en = EXCLUDED.actualizado_en`,
-                [req.usuario, bar.id, JSON.stringify(items)]
+                [req.usuario, JSON.stringify(items)]
             );
         } catch {
             // La preferencia es un extra: si no se puede guardar, se sigue.
@@ -238,20 +225,15 @@ app.post('/api/pedidos', requireAuth, async (req, res) => {
     }
 });
 
-// Resumen del turno actual en un bar (solo los pedidos que siguen vivos)
+// Resumen del turno actual (solo los pedidos que siguen vivos)
 app.get('/api/resumen', requireAuth, async (req, res) => {
-    const bar = barDePeticion(req);
-    if (!bar) return res.status(400).json({ error: 'Bar desconocido.' });
-
     try {
         await db.limpiarPedidosCaducados();
         const { rows } = await db.query(
             `SELECT p.id, p.usuario, i.clase, i.nombre, i.hielo
              FROM pedidos p
              JOIN pedido_items i ON i.pedido_id = p.id
-             WHERE p.bar = $1
-             ORDER BY p.creado_en, i.id`,
-            [bar.id]
+             ORDER BY p.creado_en, i.id`
         );
 
         // Las filas vienen sueltas (una por cosa pedida); se agrupan por
@@ -272,13 +254,10 @@ app.get('/api/resumen', requireAuth, async (req, res) => {
     }
 });
 
-// Finalizar el turno de un bar a mano, sin esperar a que caduquen
+// Finalizar el turno a mano, sin esperar a que caduquen
 app.delete('/api/pedidos', requireAuth, async (req, res) => {
-    const bar = barDePeticion(req);
-    if (!bar) return res.status(400).json({ error: 'Bar desconocido.' });
-
     try {
-        await db.query(`DELETE FROM pedidos WHERE bar = $1`, [bar.id]);
+        await db.query(`DELETE FROM pedidos`);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Error del servidor' });

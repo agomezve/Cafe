@@ -1,8 +1,6 @@
 exigirSesion();
-const bar = exigirBar();
 
 document.getElementById('nombreUsuario').innerText = getUsuario() || '';
-document.getElementById('nombreBar').innerText = bar.nombre;
 
 const inputOtro = document.getElementById('otroTexto');
 const inputOtroPincho = document.getElementById('otroPinchoTexto');
@@ -12,12 +10,12 @@ const APARTADOS = {
     pincho: { lista: document.getElementById('listaPinchos'), input: inputOtroPincho },
 };
 
-// La carta se pinta desde el catálogo del bar elegido: cada bar tiene la suya
+// La carta se pinta desde el catálogo
 function pintarCarta(clase) {
     const { lista, input } = APARTADOS[clase];
 
     // "Otro" va al final, para escribir a mano lo que no esté en la lista
-    [...CATALOGO.carta(bar, clase), 'Otro'].forEach(nombre => {
+    [...CATALOGO.carta(clase), 'Otro'].forEach(nombre => {
         const fila = document.createElement('div');
         fila.className = 'opcion';
 
@@ -32,9 +30,9 @@ function pintarCarta(clase) {
         etiqueta.append(marca, ` ${CATALOGO.etiqueta(nombre)}`);
         fila.append(etiqueta);
 
-        // El hielo solo tiene sentido en las bebidas de la carta (en "Otro" no
-        // se sabe qué es), y solo se enseña cuando esa bebida está marcada.
-        if (clase === 'bebida' && nombre !== 'Otro') {
+        // El hielo solo tiene sentido en los cafés, y solo se enseña cuando
+        // ese café está marcado.
+        if (CATALOGO.admiteHielo(clase, nombre)) {
             const hielo = document.createElement('label');
             hielo.className = 'hielo-toggle hidden';
             const casilla = document.createElement('input');
@@ -85,8 +83,8 @@ function eleccion(clase) {
         .filter(item => item.nombre);
 }
 
-// Preferencia: si otro día ya pidió algo EN ESTE BAR, se le ofrece repetirlo
-// en vez de tener que buscarlo otra vez en la lista.
+// Preferencia: si otro día ya pidió algo, se le ofrece repetirlo en vez de
+// tener que buscarlo otra vez en la lista.
 function describirPedido(items) {
     return items
         .map(item => item.nombre + (item.hielo ? ' con hielo' : ''))
@@ -131,7 +129,7 @@ function ocultarAviso() {
 async function ofrecerPreferencia() {
     let preferencia;
     try {
-        const respuesta = await authFetch(`/api/preferencia?bar=${encodeURIComponent(bar.id)}`);
+        const respuesta = await authFetch('/api/preferencia');
         preferencia = await respuesta.json();
     } catch (err) {
         return; // sin conexión no se ofrece nada: el pedido normal sigue igual
@@ -146,7 +144,7 @@ async function ofrecerPreferencia() {
     // no como HTML.
     const aviso = document.getElementById('textoPreferencia');
     aviso.innerText = '';
-    aviso.append(`⚠️ La última vez en ${bar.nombre} pediste `);
+    aviso.append('⚠️ La última vez pediste ');
     const queEs = document.createElement('strong');
     queEs.innerText = resumen;
     aviso.append(queEs, '. ¿Quieres lo mismo?');
@@ -221,7 +219,7 @@ document.getElementById('btnGuardar').addEventListener('click', async () => {
         const response = await authFetch('/api/pedidos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ bar: bar.id, items })
+            body: JSON.stringify({ items })
         });
 
         if (response.ok) {
@@ -241,10 +239,6 @@ document.getElementById('btnGuardar').addEventListener('click', async () => {
         btn.disabled = false;
         btn.innerText = 'Guardar Pedido';
     }
-});
-
-document.getElementById('btnCambiarBar').addEventListener('click', () => {
-    window.location.href = 'bares.html';
 });
 
 document.getElementById('btnResumen').addEventListener('click', () => {

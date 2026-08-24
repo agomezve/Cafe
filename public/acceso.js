@@ -1,5 +1,5 @@
 if (getToken()) {
-    window.location.href = 'bares.html';
+    window.location.href = 'app.html';
 }
 
 const inputUsuario = document.getElementById('usuario');
@@ -34,7 +34,7 @@ async function entrar() {
 
         if (data.success) {
             guardarSesion(data.nombre, data.token);
-            window.location.href = 'bares.html';
+            window.location.href = 'app.html';
         } else {
             alert(data.message || 'Ese nombre no está en la lista.');
         }

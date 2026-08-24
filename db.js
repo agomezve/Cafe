@@ -48,24 +48,23 @@ const ESQUEMA = [
     // Ya no hay contraseña: se entra solo con el nombre. Si la base de datos
     // viene del esquema anterior, la columna sobra.
     `ALTER TABLE usuarios DROP COLUMN IF EXISTS password`,
-    // Un pedido = una persona, un bar y un momento. Lo que se pide de verdad
-    // (que ahora pueden ser varias bebidas y varios pinchos) va en pedido_items.
+    // Un pedido = una persona y un momento. Lo que se pide de verdad (que
+    // pueden ser varias bebidas y varios pinchos) va en pedido_items.
     `CREATE TABLE IF NOT EXISTS pedidos (
         id SERIAL PRIMARY KEY,
         usuario TEXT NOT NULL REFERENCES usuarios(nombre) ON DELETE CASCADE,
-        bar TEXT,
         creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
     )`,
     // Migración del esquema anterior, en el que el pedido era una sola bebida
     // y un solo pincho en columnas de esta misma tabla.
-    `ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS bar TEXT`,
     `ALTER TABLE pedidos DROP COLUMN IF EXISTS tipo_cafe`,
     `ALTER TABLE pedidos DROP COLUMN IF EXISTS hielo`,
     `ALTER TABLE pedidos DROP COLUMN IF EXISTS pincho`,
     `ALTER TABLE pedidos DROP CONSTRAINT IF EXISTS pedidos_usuario_fecha_key`,
     `ALTER TABLE pedidos DROP COLUMN IF EXISTS fecha`,
-    // Pedidos viejos sin bar: son de un turno ya pasado, no hay nada que salvar
-    `DELETE FROM pedidos WHERE bar IS NULL`,
+    // Ya no se elige bar: hay una sola carta con todo junto
+    `DROP INDEX IF EXISTS pedidos_usuario_bar_unico`,
+    `ALTER TABLE pedidos DROP COLUMN IF EXISTS bar`,
     `CREATE TABLE IF NOT EXISTS pedido_items (
         id SERIAL PRIMARY KEY,
         pedido_id INTEGER NOT NULL REFERENCES pedidos(id) ON DELETE CASCADE,
@@ -81,23 +80,26 @@ const ESQUEMA = [
         clave TEXT PRIMARY KEY,
         valor TEXT NOT NULL
     )`,
-    // La preferencia pasa a ser por bar: lo que pides en el Petit Prince no
-    // tiene por qué ser lo que pides en el Verssache. La tabla antigua no
-    // sabía de bares, así que no se puede migrar: se rehace sola con el
-    // primer pedido de cada uno.
+    // La preferencia vuelve a ser una por persona. Las tablas anteriores
+    // tenían otra forma (una era por bar), así que no se pueden migrar: se
+    // rehace sola con el primer pedido de cada uno.
     `DROP TABLE IF EXISTS preferencias`,
-    `CREATE TABLE IF NOT EXISTS preferencias_bar (
-        usuario TEXT NOT NULL REFERENCES usuarios(nombre) ON DELETE CASCADE,
-        bar TEXT NOT NULL,
+    `DROP TABLE IF EXISTS preferencias_bar`,
+    `CREATE TABLE IF NOT EXISTS preferencias_usuario (
+        usuario TEXT PRIMARY KEY REFERENCES usuarios(nombre) ON DELETE CASCADE,
         items TEXT NOT NULL,
-        actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
-        PRIMARY KEY (usuario, bar)
+        actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
     )`,
     SQL_BORRAR_CADUCADOS,
-    // La unicidad ahora es por persona y bar: mientras tu pedido siga vivo no
-    // puedes pedir otro en ese bar, y al caducar sí.
-    `DROP INDEX IF EXISTS pedidos_usuario_unico`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS pedidos_usuario_bar_unico ON pedidos (usuario, bar)`,
+    // Al quitar el bar, quien tuviera un pedido vivo en cada uno se quedaría
+    // con dos: se conserva el último y así el índice de abajo puede crearse.
+    `DELETE FROM pedidos AS p WHERE EXISTS (
+        SELECT 1 FROM pedidos AS q
+         WHERE q.usuario = p.usuario AND (q.creado_en, q.id) > (p.creado_en, p.id)
+    )`,
+    // La unicidad es por persona: mientras tu pedido siga vivo no puedes pedir
+    // otro, y al caducar sí.
+    `CREATE UNIQUE INDEX IF NOT EXISTS pedidos_usuario_unico ON pedidos (usuario)`,
 ];
 
 // Los 18 empleados. Para entrar basta con el nombre.

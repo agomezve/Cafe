@@ -1,7 +1,4 @@
 exigirSesion();
-const bar = exigirBar();
-
-document.getElementById('nombreBar').innerText = bar.nombre;
 
 document.addEventListener('DOMContentLoaded', async () => {
     cargarPedidos();
@@ -52,7 +49,7 @@ function bloqueConteo(titulo, conteo, iconoPorDefecto, extra = '') {
 }
 
 async function cargarPedidos() {
-    const response = await authFetch(`/api/resumen?bar=${encodeURIComponent(bar.id)}`);
+    const response = await authFetch('/api/resumen');
     const pedidos = await response.json();
     const lista = document.getElementById('listaPedidos');
     const total = document.getElementById('totalPedidos');
@@ -96,8 +93,8 @@ async function cargarPedidos() {
 }
 
 document.getElementById('btnLimpiarTurno').addEventListener('click', async () => {
-    if (confirm(`¿Seguro que quieres borrar todos los pedidos del ${bar.nombre} para empezar un nuevo turno?`)) {
-        await authFetch(`/api/pedidos?bar=${encodeURIComponent(bar.id)}`, { method: 'DELETE' });
+    if (confirm('¿Seguro que quieres borrar todos los pedidos para empezar un nuevo turno?')) {
+        await authFetch('/api/pedidos', { method: 'DELETE' });
         cargarPedidos();
     }
 });

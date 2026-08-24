@@ -13,31 +13,31 @@ oficina y sin depender de que un ordenador esté encendido.
    que volver a entrar cada día (dura 30 días). El nombre se queda guardado
    aunque cierres sesión: la próxima vez el campo sale ya escrito y basta con
    darle a "Entrar" (si entra otra persona, lo borra y pone el suyo).
-2. **Elegir bar**: la primera pantalla es "Elige bar:" con los bares a los que
-   baja el laboratorio (ahora mismo **Verssache** y **Petit Prince**). Cada bar
-   tiene su carta, y el resumen y las preferencias van por bar.
-3. **Elegir qué se pide**: la pantalla tiene dos apartados y se puede marcar
-   **varias cosas de cada uno** (dos cafés y tres pinchos, si hace falta), o
-   solo de uno: nada es obligatorio mientras se pida algo.
-   - **Cafés y bebidas**: Solo, Con Leche, Cortado, Descafeinado y Mosto, cada
-     uno con su casilla de hielo al marcarlo, u "Otro" escribiendo a mano lo
-     que sea (una Coca-Cola, un té...). En "Otro" no se pregunta por el hielo.
-   - **Pinchos**: los de la carta del bar y "Otro" a mano.
-   Si esa persona ya pidió otro día **en ese bar**, arriba le sale un aviso con
-   lo que pidió la última vez y dos botones: repetirlo tal cual o elegir otra
-   cosa. Lo que se pidió en el otro bar no se mezcla.
-4. **Guardar**: un pedido por persona y bar mientras dure el turno. Si alguien
-   lo repite, el servidor lo rechaza y le dice cuántos minutos quedan (y aunque
+2. **Elegir qué se pide**: nada más entrar sale la pantalla del pedido, con dos
+   apartados. Se puede marcar **varias cosas de cada uno** (dos cafés y tres
+   pinchos, si hace falta), o solo de uno: nada es obligatorio mientras se pida
+   algo.
+   - **Cafés y bebidas**: Solo, Con Leche, Cortado, Descafeinado, Mosto y
+     Colacao, u "Otro" escribiendo a mano lo que sea (una Coca-Cola, un té...).
+     La casilla de hielo sale **solo en los cafés** al marcarlos: al Mosto, al
+     Colacao y a "Otro" no se les pregunta.
+   - **Pinchos**: Patatas, Jeta, Gulas, Huevos rotos, Lasaña, Tortilla,
+     Bocadillo, Gambas rebozadas, Sandwich, Empanadilla, Croissant, Rabas y
+     Bacalao, más "Otro" a mano.
+   Si esa persona ya pidió otro día, arriba le sale un aviso con lo que pidió
+   la última vez y dos botones: repetirlo tal cual o elegir otra cosa.
+3. **Guardar**: un pedido por persona mientras dure el turno. Si alguien lo
+   repite, el servidor lo rechaza y le dice cuántos minutos quedan (y aunque
    se dé doble toque a la vez desde el móvil, la base de datos solo deja
    pasar uno).
-5. **Los pedidos caducan a los 25 minutos**: se borran solos de la base de
+4. **Los pedidos caducan a los 25 minutos**: se borran solos de la base de
    datos, así el segundo turno abre el resumen y lo ve limpio, sin los cafés
    de la ronda anterior, y quien ya pidió puede volver a pedir. No hace falta
    que nadie borre nada a mano ni que haya un proceso corriendo de fondo: la
    limpieza se hace al pedir y al mirar el resumen.
-6. **Resumen**: totales por bebida, por pincho, vasos con hielo y quién
-   ha pedido qué, solo del turno en curso y solo del bar elegido. El botón "Finalizar Turno" lo vacía a mano
-   por si se quiere arrancar la siguiente ronda sin esperar los 25 minutos.
+5. **Resumen**: totales por bebida, por pincho, vasos con hielo y quién ha
+   pedido qué, solo del turno en curso. El botón "Finalizar Turno" lo vacía a
+   mano por si se quiere arrancar la siguiente ronda sin esperar los 25 minutos.
 
 ## Arrancar en local
 
@@ -136,13 +136,12 @@ cafendo/
 ├── src/estilos.css         fuente de Tailwind (se compila a public/estilos.css)
 └── public/
     ├── index.html          login (solo el nombre)
-    ├── bares.html           "Elige bar:"
-    ├── app.html              pantalla del pedido
-    ├── resumen.html           resumen del turno de ese bar
-    ├── catalogo.js             bares, bebidas y pinchos (lo usan navegador Y servidor)
-    ├── estilos.css             CSS compilado por Tailwind (no editar a mano)
-    ├── auth.js                 sesión, bar elegido, fetch autenticado y service worker
-    ├── acceso.js, bares.js, app.js, resumen.js
+    ├── app.html             pantalla del pedido
+    ├── resumen.html          resumen del turno
+    ├── catalogo.js            bebidas y pinchos (lo usan navegador Y servidor)
+    ├── estilos.css            CSS compilado por Tailwind (no editar a mano)
+    ├── auth.js                sesión, fetch autenticado y service worker
+    ├── acceso.js, app.js, resumen.js
     ├── sw.js                  caché para que cargue rápido e instalable
     ├── manifest.webmanifest
     └── icons/
@@ -150,20 +149,19 @@ cafendo/
 
 ## Base de datos
 
-Tablas `usuarios (id, nombre)`, `pedidos (id, usuario, bar, creado_en)` y
+Tablas `usuarios (id, nombre)`, `pedidos (id, usuario, creado_en)` y
 `pedido_items (id, pedido_id, clase, nombre, hielo)`. El pedido en sí solo dice
-quién y en qué bar; lo que se pide va en `pedido_items`, una fila por bebida o
+quién y cuándo; lo que se pide va en `pedido_items`, una fila por bebida o
 pincho, que es lo que permite pedir varias cosas. Hay un índice único por
-`(usuario, bar)` — eso es lo que impide pedidos duplicados en el mismo turno,
-incluso si dos peticiones llegan a la vez. Como los pedidos se borran al
-caducar, esa misma restricción deja pedir otra vez en el turno siguiente.
+`usuario` — eso es lo que impide pedidos duplicados en el mismo turno, incluso
+si dos peticiones llegan a la vez. Como los pedidos se borran al caducar, esa
+misma restricción deja pedir otra vez en el turno siguiente.
 
 En esas tablas solo vive el turno actual: no se guarda histórico de lo que pidió
 cada uno. Aparte hay dos tablas que no caducan:
 
-- `preferencias_bar (usuario, bar, items, actualizado_en)`: lo último que pidió
-  cada persona **en cada bar** (los items, en JSON), para ofrecérselo cuando
-  vuelve otro día a ese mismo bar.
+- `preferencias_usuario (usuario, items, actualizado_en)`: lo último que pidió
+  cada persona (los items, en JSON), para ofrecérselo cuando vuelve otro día.
 - `ajustes (clave, valor)`: guarda el secreto que firma las sesiones. Es
   importante que sea el mismo en todas las instancias: en Vercel cada petición
   puede caer en una función distinta y, si cada una se inventa el suyo, el
@@ -176,10 +174,10 @@ cada uno. Aparte hay dos tablas que no caducan:
   `25`). En Vercel se pone en Settings → Environment Variables.
 - **Altas y bajas de gente**: la lista `USUARIOS_INICIALES` de `db.js`. Solo
   se usa para crear usuarios la primera vez; si ya existen no se tocan.
-- **Bares, bebidas y pinchos**: todo sale de `public/catalogo.js`. Para añadir
-  un bar nuevo basta con meterlo en la lista `BARES` (con su `id`, su nombre y
-  su carta); la pantalla de elegir bar y la del pedido se pintan solas, y el
-  servidor valida contra esa misma lista.
+- **Bebidas y pinchos**: la carta sale de `public/catalogo.js`. Se añade el
+  nombre a la lista `BEBIDAS` o `PINCHOS` (y su emoji en `ICONOS`, opcional);
+  la pantalla del pedido se pinta sola y el servidor valida contra esa misma
+  lista. Si lo nuevo es un café que puede pedirse con hielo, va en `CAFES`.
 
 ## Seguridad
 
