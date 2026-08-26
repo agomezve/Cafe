@@ -153,8 +153,42 @@ app.get('/api/preferencia', requireAuth, async (req, res) => {
     }
 });
 
-// Guardar pedido (uno por persona mientras dure el turno; el índice único
-// bloquea los duplicados de forma atómica aunque lleguen dos a la vez)
+// Cuánto le queda vivo a un pedido, en segundos. Se calcula en la base de
+// datos para no depender de la hora del móvil.
+const SQL_SEGUNDOS_RESTANTES =
+    `GREATEST(0, EXTRACT(EPOCH FROM (creado_en + ($2::int * INTERVAL '1 minute') - now())))::int`;
+
+// Mi pedido de este turno, para poder repasarlo y cambiarlo
+app.get('/api/mi-pedido', requireAuth, async (req, res) => {
+    try {
+        await db.limpiarPedidosCaducados();
+
+        const { rows } = await db.query(
+            `SELECT ${SQL_SEGUNDOS_RESTANTES} AS segundos, i.clase, i.nombre, i.hielo
+             FROM pedidos p
+             LEFT JOIN pedido_items i ON i.pedido_id = p.id
+             WHERE p.usuario = $1
+             ORDER BY i.id`,
+            [req.usuario, db.MINUTOS_TURNO]
+        );
+
+        if (rows.length === 0) return res.json({ hay: false });
+
+        res.json({
+            hay: true,
+            msRestantes: rows[0].segundos * 1000,
+            items: rows
+                .filter(fila => fila.nombre)
+                .map(fila => ({ clase: fila.clase, nombre: fila.nombre, hielo: Boolean(fila.hielo) })),
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Error del servidor' });
+    }
+});
+
+// Guardar el pedido: si ya hay uno vivo de esta persona, se cambia por lo
+// nuevo en vez de rechazarlo. Se respeta la hora del pedido original, así que
+// cambiarlo no alarga el turno ni retrasa la caducidad.
 app.post('/api/pedidos', requireAuth, async (req, res) => {
     const items = normalizarItems(req.body.items);
     if (items.length === 0) {
@@ -164,45 +198,42 @@ app.post('/api/pedidos', requireAuth, async (req, res) => {
     try {
         await db.limpiarPedidosCaducados();
 
-        const { rows } = await db.query(
-            `INSERT INTO pedidos (usuario)
-             VALUES ($1)
-             ON CONFLICT (usuario) DO NOTHING
-             RETURNING id`,
-            [req.usuario]
-        );
+        // Todo en una transacción: quitar lo viejo y poner lo nuevo no puede
+        // quedarse a medias y dejar el pedido vacío.
+        const guardado = await db.transaccion(async (q) => {
+            const previo = await q(`SELECT id FROM pedidos WHERE usuario = $1`, [req.usuario]);
 
-        if (rows.length === 0) {
-            const { rows: pendientes } = await db.query(
-                `SELECT CEIL(EXTRACT(EPOCH FROM (creado_en + ($2::int * INTERVAL '1 minute') - now())) / 60)::int AS minutos
-                 FROM pedidos WHERE usuario = $1`,
+            const { rows } = await q(
+                `INSERT INTO pedidos (usuario)
+                 VALUES ($1)
+                 ON CONFLICT (usuario) DO UPDATE SET usuario = EXCLUDED.usuario
+                 RETURNING id, ${SQL_SEGUNDOS_RESTANTES} AS segundos`,
                 [req.usuario, db.MINUTOS_TURNO]
             );
-            const minutos = pendientes[0] ? Math.max(1, pendientes[0].minutos) : db.MINUTOS_TURNO;
-            return res.status(400).json({
-                error: `☕ Ya has pedido en este turno. Podrás volver a pedir dentro de ${minutos} min, cuando empiece el siguiente.`
-            });
-        }
+            const pedidoId = rows[0].id;
 
-        const pedidoId = rows[0].id;
+            await q(`DELETE FROM pedido_items WHERE pedido_id = $1`, [pedidoId]);
 
-        try {
             const valores = [];
             const marcadores = items.map((item, i) => {
                 valores.push(pedidoId, item.clase, item.nombre, item.hielo);
                 const base = i * 4;
                 return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`;
             });
-            await db.query(
+            await q(
                 `INSERT INTO pedido_items (pedido_id, clase, nombre, hielo) VALUES ${marcadores.join(', ')}`,
                 valores
             );
-        } catch (err) {
-            // Un pedido sin nada dentro sería peor que ninguno: aparecería en
-            // el resumen vacío y bloquearía el turno de esa persona.
-            await db.query(`DELETE FROM pedidos WHERE id = $1`, [pedidoId]).catch(() => {});
-            throw err;
-        }
+
+            return {
+                id: pedidoId,
+                msRestantes: rows[0].segundos * 1000,
+                modificado: previo.rows.length > 0,
+                // Lo que ha quedado guardado de verdad (ya normalizado), para
+                // que la pantalla enseñe eso y no lo que creía haber mandado
+                items,
+            };
+        });
 
         // Se guarda como preferencia para ofrecérsela otro día. Si esto falla
         // no se rompe el pedido, que es lo que de verdad importa.
@@ -219,7 +250,18 @@ app.post('/api/pedidos', requireAuth, async (req, res) => {
             // La preferencia es un extra: si no se puede guardar, se sigue.
         }
 
-        res.status(200).json({ id: pedidoId, msRestantes: db.MINUTOS_TURNO * 60 * 1000 });
+        res.status(200).json(guardado);
+    } catch (err) {
+        res.status(500).json({ error: 'Error del servidor' });
+    }
+});
+
+// Anular mi pedido: quien se arrepiente lo quita del turno y puede volver a
+// pedir de cero cuando quiera.
+app.delete('/api/mi-pedido', requireAuth, async (req, res) => {
+    try {
+        await db.query(`DELETE FROM pedidos WHERE usuario = $1`, [req.usuario]);
+        res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Error del servidor' });
     }

@@ -91,9 +91,9 @@ function describirPedido(items) {
         .join(', ');
 }
 
-// Marca lo que se pidió la última vez; lo que no esté en la carta de hoy se
-// escribe en "Otro" (así se repiten también los pedidos personalizados).
-function aplicarPreferencia(items) {
+// Deja la pantalla marcada tal cual una lista de items; lo que no esté en la
+// carta se escribe en "Otro" (así se recuperan también los pedidos a mano).
+function marcarItems(items) {
     ['bebida', 'pincho'].forEach(clase => {
         const { input } = APARTADOS[clase];
         const sueltos = [];
@@ -118,7 +118,10 @@ function aplicarPreferencia(items) {
             input.value = sueltos.join(', ').slice(0, 40);
         }
     });
+}
 
+function aplicarPreferencia(items) {
+    marcarItems(items);
     ocultarAviso();
 }
 
@@ -155,30 +158,60 @@ async function ofrecerPreferencia() {
     document.getElementById('btnRepetirNo').addEventListener('click', ocultarAviso);
 }
 
-ofrecerPreferencia();
+// Estado de la pantalla: o no has pedido (botón "Guardar Pedido") o tienes un
+// pedido vivo, que se puede cambiar tantas veces como quieras o anular.
+let finDelTurno = null;
+let temporizador = null;
+
+function pintarSinPedido(mensaje = '') {
+    finDelTurno = null;
+    clearTimeout(temporizador);
+
+    const btn = document.getElementById('btnGuardar');
+    btn.disabled = false;
+    btn.classList.remove('bg-gris');
+    btn.innerText = 'Guardar Pedido';
+
+    document.getElementById('avisoPedido').classList.add('hidden');
+    document.getElementById('avisoTurno').innerText = mensaje;
+}
+
+function pintarConPedido(pedido) {
+    const btn = document.getElementById('btnGuardar');
+    btn.disabled = false;
+    btn.classList.remove('bg-gris');
+    btn.innerText = 'Modificar pedido';
+
+    // Lo que hay pedido puede llevar texto escrito a mano, así que se pinta
+    // como texto y no como HTML.
+    const texto = document.getElementById('textoPedido');
+    texto.innerText = '';
+    texto.append('✅ Tienes pedido: ');
+    const que = document.createElement('strong');
+    que.innerText = describirPedido(pedido.items);
+    texto.append(que, '. Cambia lo que quieras y dale a "Modificar pedido".');
+
+    document.getElementById('avisoPedido').classList.remove('hidden');
+    ocultarAviso(); // si ya has pedido, no viene a cuento ofrecerte repetir
+    programarFinDeTurno(pedido.msRestantes);
+}
 
 // Cuando el pedido caduca empieza un turno nuevo y se puede volver a pedir sin
 // recargar (en el móvil la app se queda abierta en segundo plano).
-let finDelTurno = null;
-
 function revisarTurno() {
     if (!finDelTurno || Date.now() < finDelTurno) return;
-
-    finDelTurno = null;
-    const btn = document.getElementById('btnGuardar');
-    btn.disabled = false;
-    btn.innerText = 'Guardar Pedido';
-    btn.classList.remove('bg-gris');
-    document.getElementById('avisoTurno').innerText = 'Ha empezado un turno nuevo: ya puedes volver a pedir.';
+    pintarSinPedido('Ha empezado un turno nuevo: ya puedes volver a pedir.');
 }
 
 function programarFinDeTurno(msRestantes) {
+    clearTimeout(temporizador);
     if (!msRestantes) return;
 
     finDelTurno = Date.now() + msRestantes;
     const hora = new Date(finDelTurno).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-    document.getElementById('avisoTurno').innerText = `Podrás volver a pedir a partir de las ${hora}.`;
-    setTimeout(revisarTurno, msRestantes);
+    document.getElementById('avisoTurno').innerText =
+        `Tu pedido cuenta para el turno que acaba a las ${hora}.`;
+    temporizador = setTimeout(revisarTurno, msRestantes);
 }
 
 // Los temporizadores se frenan con la app en segundo plano, así que al volver
@@ -186,6 +219,44 @@ function programarFinDeTurno(msRestantes) {
 document.addEventListener('visibilitychange', () => {
     if (!document.hidden) revisarTurno();
 });
+
+document.getElementById('btnAnular').addEventListener('click', async () => {
+    if (!confirm('¿Seguro que quieres anular tu pedido de este turno?')) return;
+
+    const btn = document.getElementById('btnAnular');
+    btn.disabled = true;
+    try {
+        await authFetch('/api/mi-pedido', { method: 'DELETE' });
+        // No se desmarca nada: si ha sido sin querer, basta con volver a darle
+        // a "Guardar Pedido".
+        pintarSinPedido('Pedido anulado. Puedes volver a pedir cuando quieras.');
+    } catch (err) {
+        alert('No se pudo anular el pedido. Inténtalo otra vez.');
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+// Al abrir la pantalla: si ya hay un pedido vivo se enseña marcado y listo
+// para cambiar; si no, se ofrece repetir lo del último día.
+async function arrancar() {
+    let mio;
+    try {
+        const respuesta = await authFetch('/api/mi-pedido');
+        mio = await respuesta.json();
+    } catch (err) {
+        return; // sin conexión se deja la pantalla como está
+    }
+
+    if (mio && mio.hay) {
+        marcarItems(mio.items);
+        pintarConPedido(mio);
+    } else {
+        ofrecerPreferencia();
+    }
+}
+
+arrancar();
 
 document.getElementById('btnGuardar').addEventListener('click', async () => {
     const btn = document.getElementById('btnGuardar');
@@ -211,7 +282,8 @@ document.getElementById('btnGuardar').addEventListener('click', async () => {
         return;
     }
 
-    // Se desactiva antes de la petición para evitar pedidos duplicados por doble toque
+    // Se desactiva antes de la petición para que un doble toque no mande dos
+    const textoPrevio = btn.innerText;
     btn.disabled = true;
     btn.innerText = 'Guardando...';
 
@@ -224,20 +296,17 @@ document.getElementById('btnGuardar').addEventListener('click', async () => {
 
         if (response.ok) {
             const datos = await response.json();
-            alert('¡Pedido guardado correctamente! ☕');
-            btn.classList.add('bg-gris');
-            btn.innerText = 'Pedido ya enviado';
-            ocultarAviso();
-            programarFinDeTurno(datos.msRestantes);
+            alert(datos.modificado ? '¡Pedido modificado! ☕' : '¡Pedido guardado correctamente! ☕');
+            pintarConPedido(datos);
         } else {
             const errorData = await response.json();
             alert(errorData.error);
             btn.disabled = false;
-            btn.innerText = 'Guardar Pedido';
+            btn.innerText = textoPrevio;
         }
     } catch (err) {
         btn.disabled = false;
-        btn.innerText = 'Guardar Pedido';
+        btn.innerText = textoPrevio;
     }
 });
 

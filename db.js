@@ -7,6 +7,10 @@ const DATABASE_URL =
     process.env.DATABASE_URL_UNPOOLED;
 
 let queryImpl;
+// Ejecuta varias consultas en una transacción: o entran todas o no entra
+// ninguna. Hace falta para cambiar un pedido, que es borrar lo que había y
+// meter lo nuevo; a medias dejaría un pedido vacío.
+let transaccionImpl;
 
 if (DATABASE_URL) {
     // Producción / cualquier Postgres real (Neon, Supabase... vía Vercel Marketplace)
@@ -17,6 +21,20 @@ if (DATABASE_URL) {
         max: 3,
     });
     queryImpl = (text, params = []) => pool.query(text, params);
+    transaccionImpl = async (fn) => {
+        const cliente = await pool.connect();
+        try {
+            await cliente.query('BEGIN');
+            const resultado = await fn((text, params = []) => cliente.query(text, params));
+            await cliente.query('COMMIT');
+            return resultado;
+        } catch (err) {
+            await cliente.query('ROLLBACK').catch(() => {});
+            throw err;
+        } finally {
+            cliente.release();
+        }
+    };
 } else {
     // Desarrollo local sin credenciales en la nube: Postgres embebido en disco
     const { PGlite } = require('@electric-sql/pglite');
@@ -29,6 +47,10 @@ if (DATABASE_URL) {
         const resultado = await pglite.query(text, params);
         return { rows: resultado.rows };
     };
+    transaccionImpl = (fn) => pglite.transaction(async (tx) => fn(async (text, params = []) => {
+        const resultado = await tx.query(text, params);
+        return { rows: resultado.rows };
+    }));
 }
 
 // Duración del turno: pasados estos minutos el pedido se borra solo, así el
@@ -132,6 +154,13 @@ async function query(text, params) {
     return queryImpl(text, params);
 }
 
+// La función recibe un `q(sql, params)` que va contra la transacción abierta.
+// Si lanza, no se guarda nada.
+async function transaccion(fn) {
+    await init();
+    return transaccionImpl(fn);
+}
+
 // Borra los pedidos caducados. No hay proceso en segundo plano (en Vercel las
 // funciones son efímeras): se limpia al pedir y al mirar el resumen, que es
 // justo cuando importa que la lista esté al día.
@@ -151,4 +180,4 @@ async function ajusteEstable(clave, valorPropuesto) {
     return rows[0] ? rows[0].valor : valorPropuesto;
 }
 
-module.exports = { query, limpiarPedidosCaducados, ajusteEstable, MINUTOS_TURNO };
+module.exports = { query, transaccion, limpiarPedidosCaducados, ajusteEstable, MINUTOS_TURNO };

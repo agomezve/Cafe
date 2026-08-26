@@ -26,18 +26,27 @@ oficina y sin depender de que un ordenador esté encendido.
      Bacalao, más "Otro" a mano.
    Si esa persona ya pidió otro día, arriba le sale un aviso con lo que pidió
    la última vez y dos botones: repetirlo tal cual o elegir otra cosa.
-3. **Guardar**: un pedido por persona mientras dure el turno. Si alguien lo
-   repite, el servidor lo rechaza y le dice cuántos minutos quedan (y aunque
-   se dé doble toque a la vez desde el móvil, la base de datos solo deja
-   pasar uno).
-4. **Los pedidos caducan a los 25 minutos**: se borran solos de la base de
+3. **Guardar**: un pedido por persona mientras dure el turno (aunque se dé
+   doble toque a la vez desde el móvil, la base de datos solo deja pasar uno).
+4. **Cambiar de idea**: quien ya ha pedido ve arriba lo que tiene pedido, y la
+   pantalla sale con sus cosas ya marcadas. A partir de ahí puede:
+   - **Modificar el pedido** las veces que quiera: se marca o desmarca lo que
+     sea y el botón (que ahora pone "Modificar pedido") lo reemplaza. Cambiarlo
+     **no alarga el turno**: sigue caducando a la hora del pedido original, así
+     que no sirve para colarse en la ronda siguiente.
+   - **Anular el pedido** y volver a pedir de cero cuando quiera, sin esperar a
+     que caduque. Las casillas se quedan como estaban, así que si ha sido sin
+     querer basta con darle otra vez a "Guardar Pedido".
+5. **Los pedidos caducan a los 25 minutos**: se borran solos de la base de
    datos, así el segundo turno abre el resumen y lo ve limpio, sin los cafés
    de la ronda anterior, y quien ya pidió puede volver a pedir. No hace falta
    que nadie borre nada a mano ni que haya un proceso corriendo de fondo: la
    limpieza se hace al pedir y al mirar el resumen.
-5. **Resumen**: totales por bebida, por pincho, vasos con hielo y quién ha
-   pedido qué, solo del turno en curso. El botón "Finalizar Turno" lo vacía a
-   mano por si se quiere arrancar la siguiente ronda sin esperar los 25 minutos.
+6. **Resumen**: totales por bebida, por pincho, vasos con hielo y quién ha
+   pedido qué, solo del turno en curso. Se refresca solo cada 30 segundos, así
+   que las modificaciones de última hora se ven sin recargar. El botón
+   "Finalizar Turno" lo vacía a mano por si se quiere arrancar la siguiente
+   ronda sin esperar los 25 minutos.
 
 ## Arrancar en local
 
