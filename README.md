@@ -108,17 +108,16 @@ instalar nada, con `npx`) y una cuenta de Vercel.
    - Vercel inyecta sola la variable `DATABASE_URL` (o `POSTGRES_URL`), no
      hay que copiar ninguna contraseña a mano.
 
-4. **Añadir los secretos** (Settings → Environment Variables del proyecto en el
-   dashboard): `SESSION_SECRET` y `CRON_TOKEN`. Cada uno se genera con:
+4. **Añadir el secreto de sesión** (Settings → Environment Variables del
+   proyecto en el dashboard), variable `SESSION_SECRET`. Se genera con:
 
    ```bash
    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    ```
 
-   `SESSION_SECRET` firma las sesiones y `CRON_TOKEN` es la contraseña con la
-   que se dispara el aviso diario. Las claves de los avisos (VAPID) no hay que
-   tocarlas: el servidor genera un par la primera vez y lo guarda en la base de
-   datos.
+   Lo demás no hay que configurarlo: las claves de los avisos (VAPID) y la
+   contraseña del cron se generan solas la primera vez y se guardan en la base
+   de datos.
 
 5. **Desplegar a producción** para que tome las variables nuevas:
 
@@ -142,15 +141,33 @@ en web. Lo manda el servidor a esa hora, así que hace falta algo que llame a
 [solo garantiza la hora, no el minuto](https://vercel.com/docs/cron-jobs/usage-and-pricing)
 — pones las 10:30 y te salta en cualquier momento entre las 10:00 y las 10:59.
 Hay que usar un servicio de cron externo (cron-job.org y similares tienen plan
-gratuito con precisión de minuto) configurado así:
+gratuito con precisión de minuto).
 
-- **URL**: `https://tu-app.vercel.app/api/avisar`
-- **Método**: `POST`
-- **Cabecera**: `Authorization: Bearer <el CRON_TOKEN que pusiste en Vercel>`
-- **Horario**: `30 10 * * 1-5` (de lunes a viernes), zona horaria `Europe/Madrid`
+Los datos exactos que hay que meterle te los da la propia app. Entra con tu
+nombre y pide la configuración:
+
+```bash
+curl.exe -s -X POST https://TU-APP.vercel.app/api/login -H "Content-Type: application/json" -d "{\"usuario\":\"Aaron\"}"
+```
+
+Con el `token` que devuelve:
+
+```bash
+curl.exe -s https://TU-APP.vercel.app/api/avisar/config -H "Authorization: Bearer EL_TOKEN_DE_ARRIBA"
+```
+
+Y te responde la URL, el método, la cabecera y el horario ya montados para
+copiar y pegar en el servicio de cron.
+
+No hace falta configurar nada en Vercel: si no existe la variable de entorno
+`CRON_TOKEN`, el servidor genera una contraseña la primera vez y la guarda en
+la base de datos. Ponerla como variable de entorno sigue funcionando y manda
+sobre la de la base de datos, por si prefieres tenerla ahí.
 
 El token va en la cabecera y no en la URL a propósito: las URLs acaban en los
-registros de todo el mundo.
+registros de todo el mundo. Y la ruta tiene un freno de un aviso por minuto,
+para que un cron mal configurado (o alguien con el token) no pueda freír a
+notificaciones al laboratorio.
 
 La respuesta dice qué pasó: `{"enviados":12,"caducadas":1,"fallidos":0,...}`.
 Si fallan todos, devuelve un error 500 para que el servicio de cron te avise en

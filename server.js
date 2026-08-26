@@ -96,6 +96,39 @@ async function prepararEnvio() {
     webpush.setVapidDetails(VAPID_CONTACTO, claves.publicKey, claves.privateKey);
 }
 
+// La contraseña con la que el cron externo dispara el aviso diario. Si hay
+// variable de entorno manda esa; si no, se genera una y se guarda en la base
+// de datos, para no depender de poder tocar la configuración del hosting.
+// Se consulta desde la app con /api/avisar/config.
+let promesaTokenCron;
+function obtenerTokenCron() {
+    if (!promesaTokenCron) {
+        promesaTokenCron = (async () => {
+            if (process.env.CRON_TOKEN) return process.env.CRON_TOKEN;
+            return db.ajusteEstable('cron_token', crypto.randomBytes(32).toString('hex'));
+        })();
+    }
+    return promesaTokenCron;
+}
+
+// Freno: como mucho un aviso por minuto, contado en la base de datos para que
+// valga aunque cada petición caiga en una instancia distinta de Vercel. La
+// condición del UPDATE lo hace atómico: si dos llegan a la vez, solo una pasa.
+async function pasaElFreno() {
+    try {
+        const { rows } = await db.query(
+            `INSERT INTO ajustes (clave, valor) VALUES ('ultimo_aviso', now()::text)
+             ON CONFLICT (clave) DO UPDATE SET valor = now()::text
+             WHERE ajustes.valor::timestamptz < now() - INTERVAL '1 minute'
+             RETURNING valor`
+        );
+        return rows.length > 0;
+    } catch (err) {
+        // Si el freno falla, mejor mandar el aviso que quedarse sin él
+        return true;
+    }
+}
+
 async function crearToken(nombre) {
     const secreto = await obtenerSecreto();
     const payload = `${nombre}.${Date.now() + TOKEN_TTL_MS}`;
@@ -353,13 +386,35 @@ app.delete('/api/push/suscribir', requireAuth, async (req, res) => {
     }
 });
 
+// Los datos que hay que meter en el servicio de cron. Hace falta sesión: no es
+// para todo internet, aunque tampoco es un secreto de estado (lo único que
+// permite es lanzar el aviso, y con el freno de un minuto por medio).
+app.get('/api/avisar/config', requireAuth, async (req, res) => {
+    try {
+        const token = await obtenerTokenCron();
+        const base = `${req.protocol}://${req.get('host')}`;
+        res.json({
+            url: `${base}/api/avisar`,
+            metodo: 'POST',
+            cabecera: `Authorization: Bearer ${token}`,
+            horario: '30 10 * * 1-5',
+            zona: 'Europe/Madrid',
+            origen: process.env.CRON_TOKEN ? 'variable de entorno' : 'base de datos',
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Error del servidor' });
+    }
+});
+
 // El aviso de las 10:30. Lo llama un cron externo, no una persona, así que va
 // con su propio token en la cabecera (no en la URL, que acaba en los registros
 // de medio mundo).
 app.post('/api/avisar', async (req, res) => {
-    const esperado = process.env.CRON_TOKEN;
-    if (!esperado) {
-        return res.status(503).json({ error: 'Falta configurar CRON_TOKEN.' });
+    let esperado;
+    try {
+        esperado = await obtenerTokenCron();
+    } catch (err) {
+        return res.status(500).json({ error: 'Error del servidor' });
     }
 
     const [tipo, recibido] = (req.headers.authorization || '').split(' ');
@@ -367,6 +422,13 @@ app.post('/api/avisar', async (req, res) => {
     const bufEsperado = Buffer.from(esperado);
     if (bufRecibido.length !== bufEsperado.length || !crypto.timingSafeEqual(bufRecibido, bufEsperado)) {
         return res.status(401).json({ error: 'No autorizado.' });
+    }
+
+    // Un aviso por minuto como mucho. Protege de un cron mal configurado que
+    // reintente en bucle y de que, si el token se filtrara, alguien pudiera
+    // freír a notificaciones a todo el laboratorio.
+    if (!(await pasaElFreno())) {
+        return res.status(429).json({ error: 'Ya se mandó un aviso hace menos de un minuto.' });
     }
 
     try {
