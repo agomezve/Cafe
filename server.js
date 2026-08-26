@@ -6,6 +6,9 @@ const db = require('./db');
 const catalogo = require('./public/catalogo');
 
 const app = express();
+// Detrás del proxy de Vercel, sin esto req.protocol dice "http" aunque la
+// petición viniera por HTTPS, y las URLs que construimos salen mal.
+app.set('trust proxy', true);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
