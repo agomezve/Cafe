@@ -112,6 +112,16 @@ const ESQUEMA = [
         items TEXT NOT NULL,
         actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
     )`,
+    // Los móviles que han dicho "avísame". La clave es el endpoint que da el
+    // navegador: identifica a ese móvil y ese navegador, así que quien use dos
+    // aparatos tiene dos filas y recibe el aviso en los dos.
+    `CREATE TABLE IF NOT EXISTS suscripciones (
+        endpoint TEXT PRIMARY KEY,
+        usuario TEXT NOT NULL REFERENCES usuarios(nombre) ON DELETE CASCADE,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`,
     SQL_BORRAR_CADUCADOS,
     // Al quitar el bar, quien tuviera un pedido vivo en cada uno se quedaría
     // con dos: se conserva el último y así el índice de abajo puede crearse.

@@ -26,6 +26,13 @@
             </div>
         </div>
 
+        <div id="avisoNotificaciones" class="aviso hidden">
+            <p id="textoNotificaciones"></p>
+            <div class="mt-2.5 flex gap-2.5">
+                <button type="button" id="btnAvisarme" class="boton-suave">🔔 Avísame todos los días a las 10:30</button>
+            </div>
+        </div>
+
         <div id="avisoPedido" class="aviso hidden">
             <p id="textoPedido"></p>
             <div class="mt-2.5 flex gap-2.5">
@@ -48,9 +55,11 @@
         <hr class="my-6 h-px w-full border-0 bg-borde">
         <button id="btnResumen" class="boton bg-verde">Generar Resumen de este Turno</button>
         <button id="btnCerrarSesion" class="boton bg-pizarra">🚪 Cerrar Sesión</button>
+        <p id="estadoAvisos" class="mt-4 text-center text-[0.9rem] text-[#7a6a5f]"></p>
     </div>
     <script src="catalogo.js"></script>
     <script src="auth.js"></script>
     <script src="app.js"></script>
+    <script src="avisos.js"></script>
 </body>
 </html>

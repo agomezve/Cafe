@@ -108,12 +108,17 @@ instalar nada, con `npx`) y una cuenta de Vercel.
    - Vercel inyecta sola la variable `DATABASE_URL` (o `POSTGRES_URL`), no
      hay que copiar ninguna contraseña a mano.
 
-4. **Añadir el secreto de sesión** (Settings → Environment Variables del
-   proyecto en el dashboard), variable `SESSION_SECRET`. Para generarlo:
+4. **Añadir los secretos** (Settings → Environment Variables del proyecto en el
+   dashboard): `SESSION_SECRET` y `CRON_TOKEN`. Cada uno se genera con:
 
    ```bash
    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    ```
+
+   `SESSION_SECRET` firma las sesiones y `CRON_TOKEN` es la contraseña con la
+   que se dispara el aviso diario. Las claves de los avisos (VAPID) no hay que
+   tocarlas: el servidor genera un par la primera vez y lo guarda en la base de
+   datos.
 
 5. **Desplegar a producción** para que tome las variables nuevas:
 
@@ -124,12 +129,53 @@ instalar nada, con `npx`) y una cuenta de Vercel.
    Esto imprime la URL final (algo como `https://cafendo.vercel.app`).
    Esa es la que le pasas a tus compañeros.
 
+## El aviso diario de las 10:30
+
+Cada mañana les llega **Cafendo · ¿Qué quieres hoy?** a quienes lo hayan
+activado, y al tocarlo se abre la pantalla del pedido.
+
+El móvil no puede programarse el aviso solo: no existe forma fiable de hacerlo
+en web. Lo manda el servidor a esa hora, así que hace falta algo que llame a
+`/api/avisar` puntualmente.
+
+**No sirve el cron de Vercel**: en el plan gratuito
+[solo garantiza la hora, no el minuto](https://vercel.com/docs/cron-jobs/usage-and-pricing)
+— pones las 10:30 y te salta en cualquier momento entre las 10:00 y las 10:59.
+Hay que usar un servicio de cron externo (cron-job.org y similares tienen plan
+gratuito con precisión de minuto) configurado así:
+
+- **URL**: `https://tu-app.vercel.app/api/avisar`
+- **Método**: `POST`
+- **Cabecera**: `Authorization: Bearer <el CRON_TOKEN que pusiste en Vercel>`
+- **Horario**: `30 10 * * 1-5` (de lunes a viernes), zona horaria `Europe/Madrid`
+
+El token va en la cabecera y no en la URL a propósito: las URLs acaban en los
+registros de todo el mundo.
+
+La respuesta dice qué pasó: `{"enviados":12,"caducadas":1,"fallidos":0,...}`.
+Si fallan todos, devuelve un error 500 para que el servicio de cron te avise en
+vez de dar por buena una mañana sin avisos.
+
 ## Que lo instalen en el móvil
 
 Cada uno abre el enlace en Chrome (Android) o Safari (iPhone) y:
 
 - **Android/Chrome**: menú (⋮) → **Instalar app** / **Añadir a pantalla de inicio**.
 - **iPhone/Safari**: botón Compartir → **Añadir a pantalla de inicio**.
+
+Luego, dentro de la app, sale una vez el botón **"🔔 Avísame todos los días a
+las 10:30"**: se pulsa, se acepta el permiso del móvil y listo, no hay que
+volver a tocar nada.
+
+Dos avisos sobre esto:
+
+- **En iPhone el icono es obligatorio.** Desde una pestaña de Safari los avisos
+  no llegan, es cosa de Apple. Si alguien abre Cafendo desde Safari, la propia
+  app le explica los dos toques que le faltan.
+- **El permiso no se puede saltar** en ningún móvil: siempre hay que aceptarlo
+  una vez. Las apps normales funcionan igual.
+
+Quien se arrepienta tiene un "Quitar avisos" al final de la pantalla.
 
 Queda como un icono más, a pantalla completa, sin barra del navegador.
 
@@ -150,6 +196,7 @@ cafendo/
     ├── catalogo.js            bebidas y pinchos (lo usan navegador Y servidor)
     ├── estilos.css            CSS compilado por Tailwind (no editar a mano)
     ├── auth.js                sesión, fetch autenticado y service worker
+    ├── avisos.js              el botón de "avísame a las 10:30"
     ├── acceso.js, app.js, resumen.js
     ├── sw.js                  caché para que cargue rápido e instalable
     ├── manifest.webmanifest
@@ -171,6 +218,10 @@ cada uno. Aparte hay dos tablas que no caducan:
 
 - `preferencias_usuario (usuario, items, actualizado_en)`: lo último que pidió
   cada persona (los items, en JSON), para ofrecérselo cuando vuelve otro día.
+- `suscripciones (endpoint, usuario, p256dh, auth, creado_en)`: los móviles que
+  han dicho "avísame". La clave es el endpoint que da el navegador, así que
+  quien use dos aparatos recibe el aviso en los dos. Las que el servicio de
+  push rechaza por muertas se borran solas en el envío diario.
 - `ajustes (clave, valor)`: guarda el secreto que firma las sesiones. Es
   importante que sea el mismo en todas las instancias: en Vercel cada petición
   puede caer en una función distinta y, si cada una se inventa el suyo, el
@@ -181,6 +232,9 @@ cada uno. Aparte hay dos tablas que no caducan:
 
 - **Duración del turno**: variable de entorno `MINUTOS_TURNO` (por defecto
   `25`). En Vercel se pone en Settings → Environment Variables.
+- **Hora del aviso**: se cambia en el servicio de cron externo, no en el
+  código. Si cambias la hora, retoca también el texto `HORA_AVISO` de
+  `public/avisos.js`, que es lo que se lee en el botón.
 - **Altas y bajas de gente**: la lista `USUARIOS_INICIALES` de `db.js`. Solo
   se usa para crear usuarios la primera vez; si ya existen no se tocan.
 - **Bebidas y pinchos**: la carta sale de `public/catalogo.js`. Se añade el

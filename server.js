@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
+const webpush = require('web-push');
 const db = require('./db');
 const catalogo = require('./public/catalogo');
 
@@ -61,6 +62,38 @@ function obtenerSecreto() {
         })();
     }
     return promesaSecreto;
+}
+
+// Claves VAPID: son las que firman los avisos y le dicen al navegador que el
+// que empuja es este servidor y no otro. Tienen que ser SIEMPRE las mismas: si
+// cambian, todos los móviles suscritos dejan de recibir y hay que volver a
+// pedirles el permiso. Por eso, igual que el secreto de sesión, se guardan en
+// la base de datos si no vienen por variable de entorno. Las dos claves van
+// juntas en una sola fila a propósito: guardadas por separado, dos instancias
+// arrancando a la vez podrían dejar la pública de una con la privada de otra.
+let promesaVapid;
+function obtenerVapid() {
+    if (!promesaVapid) {
+        promesaVapid = (async () => {
+            if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+                return {
+                    publicKey: process.env.VAPID_PUBLIC_KEY,
+                    privateKey: process.env.VAPID_PRIVATE_KEY,
+                };
+            }
+            const guardado = await db.ajusteEstable('vapid', JSON.stringify(webpush.generateVAPIDKeys()));
+            return JSON.parse(guardado);
+        })();
+    }
+    return promesaVapid;
+}
+
+// A quién quejarse si un aviso da problemas: lo exige el estándar
+const VAPID_CONTACTO = process.env.VAPID_SUBJECT || 'mailto:cafendo@slclab.local';
+
+async function prepararEnvio() {
+    const claves = await obtenerVapid();
+    webpush.setVapidDetails(VAPID_CONTACTO, claves.publicKey, claves.privateKey);
 }
 
 async function crearToken(nombre) {
@@ -262,6 +295,133 @@ app.delete('/api/mi-pedido', requireAuth, async (req, res) => {
     try {
         await db.query(`DELETE FROM pedidos WHERE usuario = $1`, [req.usuario]);
         res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Error del servidor' });
+    }
+});
+
+// --- Avisos diarios ------------------------------------------------------
+
+// La clave pública, que el móvil necesita para suscribirse. Es pública de
+// verdad: no hay nada que esconder aquí.
+app.get('/api/push/clave', requireAuth, async (req, res) => {
+    try {
+        const claves = await obtenerVapid();
+        res.json({ clave: claves.publicKey });
+    } catch (err) {
+        res.status(500).json({ error: 'Error del servidor' });
+    }
+});
+
+// "Avísame todos los días": el móvil manda aquí su suscripción
+app.post('/api/push/suscribir', requireAuth, async (req, res) => {
+    const suscripcion = req.body || {};
+    const endpoint = String(suscripcion.endpoint || '');
+    const p256dh = String(suscripcion.keys?.p256dh || '');
+    const auth = String(suscripcion.keys?.auth || '');
+
+    if (!endpoint.startsWith('https://') || !p256dh || !auth) {
+        return res.status(400).json({ error: 'Suscripción no válida.' });
+    }
+
+    try {
+        // Si ese móvil ya estaba apuntado se actualiza. Puede haber cambiado de
+        // persona (movil compartido) o haber renovado sus claves.
+        await db.query(
+            `INSERT INTO suscripciones (endpoint, usuario, p256dh, auth)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (endpoint) DO UPDATE
+             SET usuario = EXCLUDED.usuario, p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth`,
+            [endpoint, req.usuario, p256dh, auth]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Error del servidor' });
+    }
+});
+
+// "Ya no quiero avisos"
+app.delete('/api/push/suscribir', requireAuth, async (req, res) => {
+    const endpoint = String(req.body?.endpoint || '');
+    if (!endpoint) return res.status(400).json({ error: 'Falta la suscripción.' });
+
+    try {
+        await db.query(`DELETE FROM suscripciones WHERE endpoint = $1`, [endpoint]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Error del servidor' });
+    }
+});
+
+// El aviso de las 10:30. Lo llama un cron externo, no una persona, así que va
+// con su propio token en la cabecera (no en la URL, que acaba en los registros
+// de medio mundo).
+app.post('/api/avisar', async (req, res) => {
+    const esperado = process.env.CRON_TOKEN;
+    if (!esperado) {
+        return res.status(503).json({ error: 'Falta configurar CRON_TOKEN.' });
+    }
+
+    const [tipo, recibido] = (req.headers.authorization || '').split(' ');
+    const bufRecibido = Buffer.from(tipo === 'Bearer' ? recibido || '' : '');
+    const bufEsperado = Buffer.from(esperado);
+    if (bufRecibido.length !== bufEsperado.length || !crypto.timingSafeEqual(bufRecibido, bufEsperado)) {
+        return res.status(401).json({ error: 'No autorizado.' });
+    }
+
+    try {
+        await prepararEnvio();
+        const { rows } = await db.query(`SELECT endpoint, p256dh, auth FROM suscripciones`);
+
+        const carga = JSON.stringify({
+            titulo: 'Cafendo',
+            cuerpo: '¿Qué quieres hoy?',
+            url: '/app.html',
+        });
+
+        let enviados = 0;
+        const caducadas = [];
+        const errores = [];
+
+        await Promise.all(rows.map(async (fila) => {
+            try {
+                await webpush.sendNotification(
+                    { endpoint: fila.endpoint, keys: { p256dh: fila.p256dh, auth: fila.auth } },
+                    carga
+                );
+                enviados++;
+            } catch (err) {
+                // 404/410 = ese móvil ya no existe (app borrada, permiso
+                // quitado). Se limpia para no arrastrar suscripciones muertas.
+                if (err.statusCode === 404 || err.statusCode === 410) {
+                    caducadas.push(fila.endpoint);
+                    return;
+                }
+                // Lo demás es un problema de verdad (configuración, red...) y
+                // hay que verlo: si no, los avisos dejan de llegar un día y
+                // nadie se entera nunca.
+                errores.push(err.statusCode ? `HTTP ${err.statusCode}` : err.code || err.message || 'desconocido');
+            }
+        }));
+
+        if (caducadas.length > 0) {
+            await db.query(`DELETE FROM suscripciones WHERE endpoint = ANY($1)`, [caducadas]);
+        }
+
+        if (errores.length > 0) {
+            console.error(`[avisar] ${errores.length} avisos fallaron:`, [...new Set(errores)].join(', '));
+        }
+
+        // Si fallaron todos habiendo a quien avisar, se responde con error para
+        // que el cron lo cante en vez de dar por buena una mañana sin avisos.
+        const codigo = rows.length > 0 && enviados === 0 && errores.length > 0 ? 500 : 200;
+        res.status(codigo).json({
+            enviados,
+            caducadas: caducadas.length,
+            fallidos: errores.length,
+            total: rows.length,
+            detalle: [...new Set(errores)],
+        });
     } catch (err) {
         res.status(500).json({ error: 'Error del servidor' });
     }
