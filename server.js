@@ -78,11 +78,13 @@ let promesaVapid;
 function obtenerVapid() {
     if (!promesaVapid) {
         promesaVapid = (async () => {
-            if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-                return {
-                    publicKey: process.env.VAPID_PUBLIC_KEY,
-                    privateKey: process.env.VAPID_PRIVATE_KEY,
-                };
+            // Se recortan por lo mismo que el token del cron: un salto de
+            // línea colado al pegarlas en el panel las invalidaría, y aquí el
+            // síntoma sería que los avisos dejan de llegar sin más.
+            const publica = (process.env.VAPID_PUBLIC_KEY || '').trim();
+            const privada = (process.env.VAPID_PRIVATE_KEY || '').trim();
+            if (publica && privada) {
+                return { publicKey: publica, privateKey: privada };
             }
             const guardado = await db.ajusteEstable('vapid', JSON.stringify(webpush.generateVAPIDKeys()));
             return JSON.parse(guardado);
@@ -107,7 +109,12 @@ let promesaTokenCron;
 function obtenerTokenCron() {
     if (!promesaTokenCron) {
         promesaTokenCron = (async () => {
-            if (process.env.CRON_TOKEN) return process.env.CRON_TOKEN;
+            // El .trim() no es capricho: al pegar un valor en el panel de un
+            // hosting se cuela un salto de línea con muchísima facilidad, y sin
+            // esto no coincide nunca con el que escribes y no hay forma humana
+            // de ver por qué.
+            const deEntorno = (process.env.CRON_TOKEN || '').trim();
+            if (deEntorno) return deEntorno;
             return db.ajusteEstable('cron_token', crypto.randomBytes(32).toString('hex'));
         })();
     }
