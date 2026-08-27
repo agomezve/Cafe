@@ -93,12 +93,21 @@ function obtenerVapid() {
     return promesaVapid;
 }
 
-// A quién quejarse si un aviso da problemas: lo exige el estándar
-const VAPID_CONTACTO = process.env.VAPID_SUBJECT || 'mailto:cafendo@slclab.local';
+// A quién acudir si un aviso da problemas: lo exige el estándar, y tiene que
+// ser una dirección de verdad. Apple, en concreto, rechaza los avisos con un
+// 403 si el contacto no le convence, y el síntoma es de los peores: los avisos
+// no llegan y no hay nada en la app que lo delate. Por eso el valor por
+// defecto es la propia dirección de la web, que siempre existe, en vez de un
+// correo inventado.
+function contactoVapid(base) {
+    const puesto = (process.env.VAPID_SUBJECT || '').trim();
+    if (puesto) return puesto;
+    return base && base.startsWith('https://') ? base : 'https://cafendo.example';
+}
 
-async function prepararEnvio() {
+async function prepararEnvio(base) {
     const claves = await obtenerVapid();
-    webpush.setVapidDetails(VAPID_CONTACTO, claves.publicKey, claves.privateKey);
+    webpush.setVapidDetails(contactoVapid(base), claves.publicKey, claves.privateKey);
 }
 
 // La contraseña con la que el cron externo dispara el aviso diario. Si hay
@@ -442,7 +451,7 @@ app.post('/api/avisar', async (req, res) => {
     }
 
     try {
-        await prepararEnvio();
+        await prepararEnvio(`${req.protocol}://${req.get('host')}`);
         const { rows } = await db.query(`SELECT endpoint, p256dh, auth FROM suscripciones`);
 
         const carga = JSON.stringify({
