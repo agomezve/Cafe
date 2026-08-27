@@ -453,6 +453,7 @@ app.post('/api/avisar', async (req, res) => {
 
         let enviados = 0;
         const caducadas = [];
+        const rechazadas = [];
         const errores = [];
 
         await Promise.all(rows.map(async (fila) => {
@@ -463,6 +464,16 @@ app.post('/api/avisar', async (req, res) => {
                 );
                 enviados++;
             } catch (err) {
+                // 403 = el servicio de push no acepta nuestra firma para ese
+                // móvil, casi siempre porque se suscribió con unas claves que
+                // ya no usamos. Se aparta, pero no se borra todavía: si fallan
+                // TODAS con 403 el problema es de configuración y borrarlas
+                // dejaría al laboratorio entero sin avisos.
+                if (err.statusCode === 403) {
+                    rechazadas.push(fila.endpoint);
+                    errores.push('HTTP 403');
+                    return;
+                }
                 // 404/410 = ese móvil ya no existe (app borrada, permiso
                 // quitado). Se limpia para no arrastrar suscripciones muertas.
                 if (err.statusCode === 404 || err.statusCode === 410) {
@@ -476,8 +487,13 @@ app.post('/api/avisar', async (req, res) => {
             }
         }));
 
-        if (caducadas.length > 0) {
-            await db.query(`DELETE FROM suscripciones WHERE endpoint = ANY($1)`, [caducadas]);
+        // Las rechazadas solo se borran si a algún otro móvil sí le llegó: eso
+        // demuestra que la configuración está bien y que el problema es de esa
+        // suscripción concreta. Si no llegó a ninguno, se quedan y el error se
+        // canta, que es lo que permite arreglarlo.
+        const aBorrar = enviados > 0 ? [...caducadas, ...rechazadas] : caducadas;
+        if (aBorrar.length > 0) {
+            await db.query(`DELETE FROM suscripciones WHERE endpoint = ANY($1)`, [aBorrar]);
         }
 
         if (errores.length > 0) {
@@ -489,7 +505,7 @@ app.post('/api/avisar', async (req, res) => {
         const codigo = rows.length > 0 && enviados === 0 && errores.length > 0 ? 500 : 200;
         res.status(codigo).json({
             enviados,
-            caducadas: caducadas.length,
+            caducadas: aBorrar.length,
             fallidos: errores.length,
             total: rows.length,
             detalle: [...new Set(errores)],

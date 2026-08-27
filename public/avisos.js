@@ -67,6 +67,42 @@ async function suscripcionActual() {
     return registro.pushManager.getSubscription();
 }
 
+async function claveDelServidor() {
+    const respuesta = await authFetch('/api/push/clave');
+    return (await respuesta.json()).clave;
+}
+
+// ¿Esta suscripción está hecha con la clave que usa hoy el servidor? Si el
+// servidor cambió de claves, la suscripción vieja ya no sirve: los avisos se
+// rechazan (403) y el móvil no se entera de nada. Comprobarlo permite
+// rehacerla sola en vez de quedarse callado para siempre.
+function hechaConLaClave(suscripcion, clave) {
+    const usada = suscripcion.options && suscripcion.options.applicationServerKey;
+    if (!usada) return true; // el navegador no lo cuenta: no hay nada que comparar
+
+    const a = new Uint8Array(usada);
+    const b = base64UrlABytes(clave);
+    return a.length === b.length && a.every((byte, i) => byte === b[i]);
+}
+
+// Apunta este móvil con la clave que toque y se lo cuenta al servidor
+async function crearSuscripcion(clave) {
+    const registro = await registroListo();
+    const suscripcion = await registro.pushManager.subscribe({
+        // Obligatorio: los avisos siempre se ven, nunca son silenciosos
+        userVisibleOnly: true,
+        applicationServerKey: base64UrlABytes(clave),
+    });
+
+    await authFetch('/api/push/suscribir', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(suscripcion),
+    });
+
+    return suscripcion;
+}
+
 async function activarAviso() {
     btnAvisarme.disabled = true;
     try {
@@ -79,22 +115,7 @@ async function activarAviso() {
             return;
         }
 
-        const respuesta = await authFetch('/api/push/clave');
-        const { clave } = await respuesta.json();
-
-        const registro = await registroListo();
-        const suscripcion = await registro.pushManager.subscribe({
-            // Obligatorio: los avisos siempre se ven, nunca son silenciosos
-            userVisibleOnly: true,
-            applicationServerKey: base64UrlABytes(clave),
-        });
-
-        await authFetch('/api/push/suscribir', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(suscripcion),
-        });
-
+        await crearSuscripcion(await claveDelServidor());
         mostrarYaAvisado();
     } catch (err) {
         mostrarBloque('No se pudo activar el aviso. Inténtalo otra vez.', true);
@@ -156,14 +177,27 @@ async function arrancarAvisos() {
     }
 
     if (suscripcion) {
-        // Este móvil ya estaba apuntado. Se vuelve a mandar al servidor por si
-        // se perdió (base de datos nueva, o el navegador renovó las claves).
-        authFetch('/api/push/suscribir', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(suscripcion),
-        }).catch(() => {});
         mostrarYaAvisado();
+
+        // Este móvil ya estaba apuntado, pero puede que con unas claves que el
+        // servidor ya no usa: entonces sus avisos se rechazan y aquí nadie se
+        // entera. Si no coinciden, se rehace la suscripción con las de ahora.
+        try {
+            const clave = await claveDelServidor();
+            if (hechaConLaClave(suscripcion, clave)) {
+                // Coinciden: solo se reenvía por si el servidor la perdió
+                await authFetch('/api/push/suscribir', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(suscripcion),
+                });
+            } else {
+                await suscripcion.unsubscribe().catch(() => {});
+                await crearSuscripcion(clave);
+            }
+        } catch (err) {
+            // Sin conexión no se toca nada: ya está puesto lo de "te avisaré"
+        }
         return;
     }
 
