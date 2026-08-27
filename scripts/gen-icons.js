@@ -46,6 +46,27 @@ async function run() {
         .png()
         .toFile(path.join(outDir, 'apple-touch-icon.png'));
 
+    // Icono de la barra de estado de Android (el "badge" de las
+    // notificaciones). Android lo pinta como silueta: solo mira la
+    // transparencia y colorea el resto. Así que tiene que ser la taza en
+    // blanco sólido sobre fondo transparente; con fondo blanco se vería como
+    // un cuadrado relleno.
+    const badge = 96;
+    const badgeInner = Math.round(badge * 0.7);
+    const taza = await sharp(recorte)
+        .resize(badgeInner, badgeInner, { fit: 'contain', background: TRANSPARENTE })
+        .toBuffer();
+    const conMargen = await sharp({ create: { width: badge, height: badge, channels: 4, background: TRANSPARENTE } })
+        .composite([{ input: taza, gravity: 'center' }])
+        .png()
+        .toBuffer();
+    // Se queda solo con la forma (el canal alfa) y se pinta toda de blanco
+    const alfa = await sharp(conMargen).extractChannel(3).toBuffer();
+    await sharp({ create: { width: badge, height: badge, channels: 3, background: '#ffffff' } })
+        .joinChannel(alfa)
+        .png()
+        .toFile(path.join(outDir, 'badge-96.png'));
+
     // Favicon
     const favInner = Math.round(48 * 0.8);
     await sharp({ create: { width: 48, height: 48, channels: 4, background: '#ffffff' } })

@@ -42,9 +42,15 @@ const MAX_LONGITUD_OTRO = 40;
 // pincho, pero tampoco cien.
 const MAX_ITEMS = 12;
 
+// Hora a la que se manda el aviso diario. Solo es el texto que se lee en la
+// app y en la notificación: quien dispara de verdad a esa hora es el servicio
+// de cron externo, así que si se cambia aquí hay que cambiarlo también allí.
+const HORA_AVISO = '10:30';
+
 const CATALOGO = {
     bebidas: BEBIDAS,
     pinchos: PINCHOS,
+    horaAviso: HORA_AVISO,
     maxLongitudOtro: MAX_LONGITUD_OTRO,
     maxItems: MAX_ITEMS,
 

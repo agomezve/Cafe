@@ -9,7 +9,7 @@ const textoAvisos = document.getElementById('textoNotificaciones');
 const btnAvisarme = document.getElementById('btnAvisarme');
 const estadoAvisos = document.getElementById('estadoAvisos');
 
-const HORA_AVISO = '10:30';
+const HORA_AVISO = CATALOGO.horaAviso;
 
 const soportaAvisos =
     'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;

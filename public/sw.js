@@ -1,4 +1,4 @@
-const CACHE = 'cafendo-v9';
+const CACHE = 'cafendo-v10';
 const ARCHIVOS = [
     'index.html',
     'app.html',
@@ -15,6 +15,7 @@ const ARCHIVOS = [
     'logo-cafe.jpg',
     'icons/icon-192.png',
     'icons/icon-512.png',
+    'icons/badge-96.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -43,8 +44,12 @@ self.addEventListener('push', (event) => {
 
     event.waitUntil(self.registration.showNotification(datos.titulo || 'Cafendo', {
         body: datos.cuerpo || '¿Qué quieres hoy?',
-        icon: 'icons/icon-192.png',
-        badge: 'icons/icon-192.png',
+        // Rutas absolutas: en el service worker las relativas dependen de
+        // dónde esté el archivo y es fácil que acaben apuntando a nada.
+        icon: '/icons/icon-192.png',
+        // El de la barra de estado de Android, que se pinta como silueta y
+        // por eso es blanco sobre transparente.
+        badge: '/icons/badge-96.png',
         // Con el mismo tag, un aviso nuevo reemplaza al anterior en vez de
         // apilarse: nadie quiere cinco "¿Qué quieres hoy?" en la pantalla.
         tag: 'turno-cafe',

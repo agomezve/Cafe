@@ -379,14 +379,37 @@ app.post('/api/push/suscribir', requireAuth, async (req, res) => {
     try {
         // Si ese móvil ya estaba apuntado se actualiza. Puede haber cambiado de
         // persona (movil compartido) o haber renovado sus claves.
-        await db.query(
+        const { rows } = await db.query(
             `INSERT INTO suscripciones (endpoint, usuario, p256dh, auth)
              VALUES ($1, $2, $3, $4)
              ON CONFLICT (endpoint) DO UPDATE
-             SET usuario = EXCLUDED.usuario, p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth`,
+             SET usuario = EXCLUDED.usuario, p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth
+             RETURNING (xmax = 0) AS es_nueva`,
             [endpoint, req.usuario, p256dh, auth]
         );
         res.json({ success: true });
+
+        // A quien acaba de activarlo se le manda uno enseguida, para que vea
+        // que le funciona sin esperar a mañana. Solo la primera vez: la app
+        // reenvía la suscripción cada vez que se abre, y sin esto recibiría un
+        // aviso en cada apertura.
+        if (rows[0] && rows[0].es_nueva) {
+            try {
+                await prepararEnvio(`${req.protocol}://${req.get('host')}`);
+                await webpush.sendNotification(
+                    { endpoint, keys: { p256dh, auth } },
+                    JSON.stringify({
+                        titulo: 'Cafendo',
+                        cuerpo: `¡Listo! Te avisaré cada día a las ${catalogo.horaAviso}.`,
+                        url: '/app.html',
+                    })
+                );
+            } catch (err) {
+                // Que falle el de bienvenida no invalida la suscripción, que
+                // es lo que de verdad importa. Ya se respondió que sí.
+                console.error('[suscribir] no se pudo mandar el aviso de bienvenida:', err.statusCode || err.message);
+            }
+        }
     } catch (err) {
         res.status(500).json({ error: 'Error del servidor' });
     }
