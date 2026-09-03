@@ -19,6 +19,19 @@ const PINCHOS = [
     'Sandwich', 'Empanadilla', 'Croissant', 'Rabas', 'Bacalao',
 ];
 
+// Lo que suele hacer falta reponer en el laboratorio. Es una lista aparte de
+// la del bar: aquí se compra, allí se pide.
+const COMPRA = [
+    'Café', 'Ambientador', 'Rollos Cocina', 'Papel Higiénico',
+    'Vasos', 'Cucharas', 'Galletas', 'Fairy',
+    'Jabón manos', 'Cola-Cao', 'Leche', 'Sacarina', 'Azúcar',
+];
+
+// A quién le llega el aviso cuando alguien apunta algo en la lista de la
+// compra: es quien se encarga de comprarlo. Tiene que ser un nombre de los de
+// USUARIOS_INICIALES en db.js, y esa persona debe tener los avisos activados.
+const AVISAR_COMPRA_A = 'Julio';
+
 // Lo que se lee en pantalla cuando el nombre corto se queda escueto
 const ETIQUETAS = {
     'Solo': 'Café Solo',
@@ -32,6 +45,10 @@ const ICONOS = {
     'Lasaña': '🍝', 'Tortilla': '🥚', 'Bocadillo': '🥪', 'Gambas rebozadas': '🍤',
     'Sandwich': '🍞', 'Empanadilla': '🥟', 'Croissant': '🥐', 'Rabas': '🦑',
     'Bacalao': '🐟',
+    'Café': '☕', 'Ambientador': '🌸', 'Rollos Cocina': '🧻', 'Papel Higiénico': '🚻',
+    'Vasos': '🥤', 'Cucharas': '🥄', 'Galletas': '🍪', 'Fairy': '🧴',
+    'Jabón manos': '🧼', 'Cola-Cao': '🍫', 'Leche': '🥛', 'Sacarina': '🍬',
+    'Azúcar': '🧂',
 };
 
 // Texto libre de la opción "Otro": corto, que esto acaba en una lista para leer
@@ -50,6 +67,8 @@ const HORA_AVISO = '10:30';
 const CATALOGO = {
     bebidas: BEBIDAS,
     pinchos: PINCHOS,
+    compra: COMPRA,
+    avisarCompraA: AVISAR_COMPRA_A,
     horaAviso: HORA_AVISO,
     maxLongitudOtro: MAX_LONGITUD_OTRO,
     maxItems: MAX_ITEMS,

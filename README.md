@@ -47,6 +47,16 @@ oficina y sin depender de que un ordenador esté encendido.
    que las modificaciones de última hora se ven sin recargar. El botón
    "Finalizar Turno" lo vacía a mano por si se quiere arrancar la siguiente
    ronda sin esperar los 25 minutos.
+7. **Lista de la compra**: el botón amarillo lleva a una pantalla aparte donde
+   se apunta lo que hace falta reponer en el laboratorio (café, papel, vasos...,
+   más "Otro" a mano). No tiene nada que ver con el turno del café: **no
+   caduca**, se queda hasta que alguien la borre con el botón de abajo.
+   - No se guarda quién apuntó cada cosa: la lista es del laboratorio.
+   - Lo que ya estaba apuntado no se duplica, aunque lo pongan tres personas o
+     con distintas mayúsculas.
+   - Cada vez que se apunta algo nuevo, le llega un aviso a la persona que se
+     encarga de comprar (la constante `AVISAR_COMPRA_A` de `catalogo.js`,
+     ahora **Julio**), que debe tener los avisos activados para recibirlo.
 
 ## Arrancar en local
 
@@ -210,11 +220,12 @@ cafendo/
     ├── index.html          login (solo el nombre)
     ├── app.html             pantalla del pedido
     ├── resumen.html          resumen del turno
+    ├── compra.html            lista de la compra del laboratorio
     ├── catalogo.js            bebidas y pinchos (lo usan navegador Y servidor)
     ├── estilos.css            CSS compilado por Tailwind (no editar a mano)
     ├── auth.js                sesión, fetch autenticado y service worker
     ├── avisos.js              el botón de "avísame a las 10:30"
-    ├── acceso.js, app.js, resumen.js
+    ├── acceso.js, app.js, resumen.js, compra.js
     ├── sw.js                  caché para que cargue rápido e instalable
     ├── manifest.webmanifest
     └── icons/
@@ -235,6 +246,9 @@ cada uno. Aparte hay dos tablas que no caducan:
 
 - `preferencias_usuario (usuario, items, actualizado_en)`: lo último que pidió
   cada persona (los items, en JSON), para ofrecérselo cuando vuelve otro día.
+- `lista_compra (id, articulo, creado_en)`: lo que hace falta reponer, con un
+  índice único por `lower(articulo)` para que no se repita. Sin nombres de
+  personas, y sin caducidad: se vacía a mano desde su pantalla.
 - `suscripciones (endpoint, usuario, p256dh, auth, creado_en)`: los móviles que
   han dicho "avísame". La clave es el endpoint que da el navegador, así que
   quien use dos aparatos recibe el aviso en los dos. Las que el servicio de

@@ -10,6 +10,9 @@
     --color-tinta: #3e2723;
     --color-borde: #E0D8D0;
     --color-verde: #4CAF50;
+    /* Amarillo del botón de la compra. Lleva texto oscuro: sobre amarillo, el
+       blanco no se lee. */
+    --color-amarillo: #F2B705;
     --color-rojo: #d32f2f;
     --color-gris: #9e9e9e;
     --color-pizarra: #607d8b;
@@ -35,6 +38,27 @@
 
     .titulo {
         @apply mb-6 text-center text-[1.4rem] font-bold;
+    }
+
+    /* Cabecera con la flecha de volver a la izquierda y el título centrado.
+       La flecha ocupa su hueco a ambos lados para que el título quede
+       centrado de verdad y no desplazado. */
+    .cabecera {
+        @apply mb-6 flex w-full items-center gap-2;
+    }
+
+    .cabecera .titulo {
+        @apply mb-0 flex-1;
+    }
+
+    .flecha-atras {
+        @apply flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl
+               text-[1.6rem] leading-none text-cafe transition-transform active:scale-90;
+    }
+
+    /* El hueco simétrico al de la flecha, para centrar el título */
+    .hueco-flecha {
+        @apply h-11 w-11 shrink-0;
     }
 
     /* Cabecera de cada apartado de la pantalla de pedido */

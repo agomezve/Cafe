@@ -1,8 +1,9 @@
-const CACHE = 'cafendo-v10';
+const CACHE = 'cafendo-v11';
 const ARCHIVOS = [
     'index.html',
     'app.html',
     'resumen.html',
+    'compra.html',
     'estilos.css',
     'catalogo.js',
     'auth.js',
@@ -10,6 +11,7 @@ const ARCHIVOS = [
     'app.js',
     'avisos.js',
     'resumen.js',
+    'compra.js',
     'manifest.webmanifest',
     'logo-slclab.png',
     'logo-cafe.jpg',

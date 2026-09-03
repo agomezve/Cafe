@@ -43,6 +43,30 @@ function normalizarItems(items) {
     return salida;
 }
 
+// Igual que con la carta: valen los de la lista o, para "Otro", texto corto.
+// Se descartan los repetidos dentro de la misma tanda.
+function normalizarArticulos(articulos) {
+    if (!Array.isArray(articulos)) return [];
+
+    const vistos = new Set();
+    const salida = [];
+
+    for (const suelto of articulos) {
+        if (salida.length >= catalogo.maxItems) break;
+
+        const articulo = String(suelto || '').trim();
+        if (!articulo || articulo.length > catalogo.maxLongitudOtro) continue;
+
+        const clave = articulo.toLowerCase();
+        if (vistos.has(clave)) continue;
+        vistos.add(clave);
+
+        salida.push(articulo);
+    }
+
+    return salida;
+}
+
 const TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 días: pensado para el móvil instalado
 
 // El secreto que firma las sesiones tiene que ser el MISMO en todas las
@@ -346,6 +370,92 @@ app.post('/api/pedidos', requireAuth, async (req, res) => {
 app.delete('/api/mi-pedido', requireAuth, async (req, res) => {
     try {
         await db.query(`DELETE FROM pedidos WHERE usuario = $1`, [req.usuario]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Error del servidor' });
+    }
+});
+
+// --- Lista de la compra --------------------------------------------------
+
+// Manda un aviso a una persona (a todos sus móviles). Devuelve a cuántos llegó.
+async function avisarA(nombre, cuerpo, base) {
+    const { rows } = await db.query(
+        `SELECT endpoint, p256dh, auth FROM suscripciones WHERE usuario = $1`,
+        [nombre]
+    );
+    if (rows.length === 0) return 0;
+
+    await prepararEnvio(base);
+    const carga = JSON.stringify({ titulo: 'Cafendo', cuerpo, url: '/compra.html' });
+
+    let llegaron = 0;
+    await Promise.all(rows.map(async (fila) => {
+        try {
+            await webpush.sendNotification(
+                { endpoint: fila.endpoint, keys: { p256dh: fila.p256dh, auth: fila.auth } },
+                carga
+            );
+            llegaron++;
+        } catch (err) {
+            if (err.statusCode === 404 || err.statusCode === 410) {
+                await db.query(`DELETE FROM suscripciones WHERE endpoint = $1`, [fila.endpoint]).catch(() => {});
+            }
+        }
+    }));
+    return llegaron;
+}
+
+app.get('/api/compra', requireAuth, async (req, res) => {
+    try {
+        const { rows } = await db.query(`SELECT articulo FROM lista_compra ORDER BY creado_en, id`);
+        res.json(rows.map(fila => fila.articulo));
+    } catch (err) {
+        res.status(500).json({ error: 'Error del servidor' });
+    }
+});
+
+// Apuntar artículos. Los que ya estaban no se duplican ni vuelven a avisar.
+app.post('/api/compra', requireAuth, async (req, res) => {
+    const articulos = normalizarArticulos(req.body.articulos);
+    if (articulos.length === 0) {
+        return res.status(400).json({ error: 'Elige al menos un artículo.' });
+    }
+
+    try {
+        const { rows } = await db.query(
+            `INSERT INTO lista_compra (articulo)
+             SELECT * FROM unnest($1::text[])
+             ON CONFLICT (lower(articulo)) DO NOTHING
+             RETURNING articulo`,
+            [articulos]
+        );
+        const nuevos = rows.map(fila => fila.articulo);
+
+        res.json({ nuevos, repetidos: articulos.length - nuevos.length });
+
+        // Solo se avisa si de verdad se ha apuntado algo nuevo: apuntar lo que
+        // ya estaba no es noticia para quien va a comprar.
+        if (nuevos.length > 0) {
+            const cuerpo = nuevos.length === 1
+                ? 'Se ha añadido un nuevo artículo a la lista de la compra'
+                : `Se han añadido ${nuevos.length} artículos a la lista de la compra`;
+            try {
+                await avisarA(catalogo.avisarCompraA, cuerpo, `${req.protocol}://${req.get('host')}`);
+            } catch (err) {
+                // El artículo ya está guardado, que es lo que importa
+                console.error('[compra] no se pudo avisar:', err.statusCode || err.message);
+            }
+        }
+    } catch (err) {
+        res.status(500).json({ error: 'Error del servidor' });
+    }
+});
+
+// Ya está todo comprado: se vacía la lista
+app.delete('/api/compra', requireAuth, async (req, res) => {
+    try {
+        await db.query(`DELETE FROM lista_compra`);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Error del servidor' });

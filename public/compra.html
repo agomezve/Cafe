@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de la compra · Cafendo</title>
+    <link rel="stylesheet" href="estilos.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/favicon.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <meta name="theme-color" content="#6F4E37">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Cafendo">
+</head>
+<body>
+    <div class="tarjeta">
+        <div class="cabecera">
+            <button type="button" id="btnVolver" class="flecha-atras" aria-label="Volver a los cafés">←</button>
+            <h2 class="titulo">🛒 Lista de la Compra</h2>
+            <span class="hueco-flecha" aria-hidden="true"></span>
+        </div>
+
+        <h3 class="apartado">🧺 ¿Qué hace falta?</h3>
+        <p class="pista">Puedes marcar varios.</p>
+        <div id="listaArticulos" class="opciones"></div>
+        <input type="text" id="otroTexto" placeholder="¿Qué otra cosa hace falta?" maxlength="40" class="campo hidden">
+
+        <button id="btnGuardar" class="boton">Guardar artículos</button>
+        <p id="avisoGuardado" class="mt-3 text-center text-[0.95rem] text-[#7a6a5f]"></p>
+
+        <hr class="my-6 h-px w-full border-0 bg-borde">
+
+        <button id="btnPedido" class="boton bg-verde">Generar pedido</button>
+        <div id="resumenCompra" class="w-full"></div>
+
+        <hr class="my-6 h-px w-full border-0 bg-borde">
+
+        <button id="btnBorrar" class="boton bg-rojo">🗑️ Borrar lista de la compra</button>
+        <button id="btnCerrarSesion" class="boton bg-pizarra">🚪 Cerrar Sesión</button>
+    </div>
+    <script src="catalogo.js"></script>
+    <script src="auth.js"></script>
+    <script src="compra.js"></script>
+</body>
+</html>

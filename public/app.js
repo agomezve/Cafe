@@ -314,4 +314,8 @@ document.getElementById('btnResumen').addEventListener('click', () => {
     window.location.href = 'resumen.html';
 });
 
+document.getElementById('btnCompra').addEventListener('click', () => {
+    window.location.href = 'compra.html';
+});
+
 document.getElementById('btnCerrarSesion').addEventListener('click', cerrarSesion);

@@ -112,6 +112,17 @@ const ESQUEMA = [
         items TEXT NOT NULL,
         actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
     )`,
+    // La lista de la compra del laboratorio. No caduca como los pedidos: se
+    // queda hasta que alguien la borre, que para eso se compra cuando se
+    // puede. A propósito no se guarda quién apuntó cada cosa: la lista es del
+    // laboratorio, no de nadie.
+    `CREATE TABLE IF NOT EXISTS lista_compra (
+        id SERIAL PRIMARY KEY,
+        articulo TEXT NOT NULL,
+        creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`,
+    // Sin repetidos aunque lo apunten tres personas y con distintas mayúsculas
+    `CREATE UNIQUE INDEX IF NOT EXISTS lista_compra_articulo ON lista_compra (lower(articulo))`,
     // Los móviles que han dicho "avísame". La clave es el endpoint que da el
     // navegador: identifica a ese móvil y ese navegador, así que quien use dos
     // aparatos tiene dos filas y recibe el aviso en los dos.
