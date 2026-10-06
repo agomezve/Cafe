@@ -17,6 +17,7 @@
     --color-gris: #9e9e9e;
     --color-pizarra: #607d8b;
     --color-hielo: #0288d1;
+    --color-plancha: #e65100;
 
     --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
 }
@@ -87,7 +88,8 @@
 
     .boton {
         @apply mt-2.5 w-full cursor-pointer rounded-xl bg-cafe px-4 py-4 text-[1.1rem] font-bold text-white
-               transition-transform active:scale-[0.97] disabled:cursor-default;
+               transition-transform active:scale-[0.97] disabled:cursor-default disabled:opacity-60
+               disabled:active:scale-100;
     }
 
     /* "Puedes marcar varias" y demás letra pequeña de un apartado */
@@ -96,10 +98,11 @@
     }
 
     /* Opción de bebida o de pincho: la fila entera se resalta al marcarla.
-       Se marcan varias, así que son casillas, no botones de radio. */
+       Se marcan varias, así que son casillas, no botones de radio. Si en el
+       móvil no caben el nombre y los botones, los botones bajan a otra línea. */
     .opcion {
-        @apply flex w-full items-center gap-2 rounded-xl border-2 border-borde bg-[#FAFAFA] px-5 py-[18px]
-               text-[1.1rem] font-medium;
+        @apply flex w-full flex-wrap items-center gap-2 rounded-xl border-2 border-borde bg-[#FAFAFA] px-4
+               py-[14px] text-[1.1rem] font-medium;
     }
 
     /* Solo cuenta la casilla de la propia opción: la del hielo va aparte */
@@ -107,25 +110,127 @@
         @apply border-cafe bg-cafe-claro text-cafe;
     }
 
+    /* El nombre ocupa lo que necesita: si no caben él y los botones, bajan
+       los botones en vez de apretar el nombre en tres líneas */
     .opcion-etiqueta {
-        @apply flex flex-1 cursor-pointer items-center;
+        @apply flex flex-auto cursor-pointer items-center;
     }
 
     .opcion-etiqueta input[type="checkbox"] {
         @apply mr-4 scale-[1.4] accent-cafe;
     }
 
-    /* Hielo: aparece pegado a la bebida en cuanto se marca */
-    .hielo-toggle {
+    /* Hielo, plancha y cantidad: aparecen pegados a la cosa en cuanto se marca */
+    .opcion-controles {
+        @apply ml-auto flex shrink-0 items-center gap-2;
+    }
+
+    .extra {
         @apply flex shrink-0 cursor-pointer items-center rounded-lg border-2 border-borde bg-white
-               px-2.5 py-1.5 text-[0.95rem] text-hielo;
+               px-2.5 py-1.5 text-[0.95rem];
     }
 
-    .hielo-toggle input[type="checkbox"] {
-        @apply mr-1.5 scale-[1.2] accent-hielo;
+    .extra input[type="checkbox"] {
+        @apply mr-1.5 scale-[1.2];
     }
 
-    .hielo-toggle:has(input:checked) {
-        @apply border-hielo;
+    .extra-hielo {
+        @apply text-hielo has-checked:border-hielo has-checked:bg-[#e1f5fe];
+    }
+
+    .extra-hielo input[type="checkbox"] {
+        @apply accent-hielo;
+    }
+
+    .extra-plancha {
+        @apply font-bold text-plancha has-checked:border-plancha has-checked:bg-[#fff3e0];
+    }
+
+    .extra-plancha input[type="checkbox"] {
+        @apply accent-plancha;
+    }
+
+    /* x1, x2...: se toca para sumar uno; el "−" de al lado resta */
+    .cantidad {
+        @apply h-10 min-w-12 cursor-pointer rounded-lg border-2 border-cafe bg-white px-2 text-[1.05rem] font-bold
+               text-cafe transition-transform active:scale-90 disabled:cursor-default disabled:opacity-50;
+    }
+
+    .cantidad-menos {
+        @apply h-10 w-9 cursor-pointer rounded-lg border-2 border-borde bg-white text-[1.2rem] leading-none
+               font-bold text-cafe transition-transform active:scale-90;
+    }
+
+    /* Lo que no está en la carta: se escribe y se añade como una fila más */
+    .otro {
+        @apply mb-1 flex w-full gap-2;
+    }
+
+    .otro .campo {
+        @apply mb-0 min-w-0 flex-1 px-4 py-3;
+    }
+
+    .otro-boton {
+        @apply shrink-0 cursor-pointer rounded-xl border-2 border-cafe bg-white px-4 font-bold text-cafe
+               transition-transform active:scale-[0.97];
+    }
+
+    .otro-aviso {
+        @apply mb-5 min-h-[1.25rem] w-full text-left text-[0.85rem] text-[#7a6a5f];
+    }
+
+    /* Un destello en la fila a la que se acaba de sumar algo desde "Otro" */
+    .resalta {
+        animation: resalta 0.9s ease-out;
+    }
+
+    /* "Tu pedido": lo elegido hasta ahora, con su cantidad */
+    .tu-pedido {
+        @apply mb-2 w-full rounded-xl border-2 border-dashed border-cafe bg-cafe-claro px-4 py-3 text-left;
+    }
+
+    .tu-pedido li {
+        @apply flex items-center gap-2 py-1 text-[1rem];
+    }
+
+    .quitar-linea {
+        @apply ml-auto h-8 w-8 shrink-0 cursor-pointer rounded-lg text-[#8a7a6f] active:scale-90;
+    }
+
+    /* El botón de guardar se queda a la vista mientras se baja por la carta */
+    .barra-guardar {
+        @apply sticky bottom-0 z-10 w-full bg-white/95 pt-1 backdrop-blur-sm;
+        padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    }
+
+    /* Resumen: un bloque por apartado */
+    .bloque {
+        @apply mb-5 rounded-xl border-l-[5px] border-cafe bg-[#F9F6F0] p-5 text-left;
+    }
+
+    .bloque-titulo {
+        @apply mb-1.5 text-[0.95rem] font-bold tracking-wide text-cafe uppercase;
+    }
+
+    /* Una persona por fila: nombre, lo que pide y la hora al final */
+    .persona {
+        @apply flex items-start gap-3 border-b border-borde py-3 text-[1.05rem] leading-snug last:border-b-0;
+    }
+
+    .persona-mia {
+        @apply -mx-2 rounded-lg bg-cafe-claro px-2;
+    }
+
+    .hora {
+        @apply ml-auto shrink-0 text-right text-[0.95rem] font-bold text-cafe tabular-nums;
+    }
+}
+
+@keyframes resalta {
+    from {
+        box-shadow: 0 0 0 4px var(--color-amarillo);
+    }
+    to {
+        box-shadow: 0 0 0 0 transparent;
     }
 }

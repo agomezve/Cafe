@@ -36,24 +36,40 @@
         <div id="avisoPedido" class="aviso hidden">
             <p id="textoPedido"></p>
             <div class="mt-2.5 flex gap-2.5">
+                <button type="button" id="btnVerResumen" class="boton-suave">📋 Ver resumen</button>
                 <button type="button" id="btnAnular" class="boton-suave">Anular mi pedido</button>
             </div>
         </div>
 
         <h3 class="apartado">☕ Cafés y bebidas</h3>
-        <p class="pista">Puedes marcar varias.</p>
-        <div id="listaBebidas" class="opciones"></div>
-        <input type="text" id="otroTexto" placeholder="¿Qué quieres tomar?" maxlength="40" class="campo hidden">
+        <p class="pista">Marca lo que quieras y toca x1 para pedir más de uno.</p>
+        <div id="listaBebidas" class="opciones mb-3"></div>
+        <form class="otro" data-clase="bebida">
+            <input type="text" placeholder="¿Otra bebida? Escríbela" maxlength="40" class="campo" enterkeyhint="done">
+            <button type="submit" class="otro-boton">Añadir</button>
+        </form>
+        <p class="otro-aviso" data-clase="bebida"></p>
 
         <h3 class="apartado">🥘 Pinchos</h3>
-        <p class="pista">Puedes marcar varios.</p>
-        <div id="listaPinchos" class="opciones"></div>
-        <input type="text" id="otroPinchoTexto" placeholder="¿Qué pincho quieres?" maxlength="40" class="campo hidden">
+        <p class="pista">Marca los que quieras y toca x1 para pedir más de uno.</p>
+        <div id="listaPinchos" class="opciones mb-3"></div>
+        <form class="otro" data-clase="pincho">
+            <input type="text" placeholder="¿Otro pincho? Escríbelo" maxlength="40" class="campo" enterkeyhint="done">
+            <button type="submit" class="otro-boton">Añadir</button>
+        </form>
+        <p class="otro-aviso" data-clase="pincho"></p>
 
-        <button id="btnGuardar" class="boton">Guardar Pedido</button>
-        <p id="avisoTurno" class="mt-3 text-center text-[0.95rem] text-[#7a6a5f]"></p>
+        <div id="tuPedido" class="tu-pedido hidden">
+            <p class="mb-1 text-[0.95rem] font-bold tracking-wide text-cafe uppercase">🧾 Tu pedido</p>
+            <ul id="lineasPedido"></ul>
+        </div>
+
+        <div class="barra-guardar">
+            <button id="btnGuardar" class="boton">Guardar Pedido</button>
+        </div>
+        <p id="avisoTurno" class="mt-1 text-center text-[0.95rem] text-[#7a6a5f]"></p>
         <hr class="my-6 h-px w-full border-0 bg-borde">
-        <button id="btnResumen" class="boton bg-verde">Generar Resumen de este Turno</button>
+        <button id="btnResumen" class="boton bg-verde">📋 Ver Resumen del Turno</button>
         <button id="btnCompra" class="boton bg-amarillo text-tinta">🛒 Lista de la Compra</button>
         <button id="btnCerrarSesion" class="boton bg-pizarra">🚪 Cerrar Sesión</button>
         <p id="estadoAvisos" class="mt-4 text-center text-[0.9rem] text-[#7a6a5f]"></p>

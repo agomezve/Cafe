@@ -15,17 +15,21 @@
 </head>
 <body>
     <div class="tarjeta">
-        <div id="areaResumen" class="w-full rounded-xl bg-white p-[25px]">
+        <div id="avisoHecho" class="aviso hidden"></div>
+
+        <div id="areaResumen" class="w-full">
             <div class="mb-5 text-center">
                 <img src="logo-slclab.png" alt="SLCLAB Logo" width="120" class="mx-auto mb-2.5 max-w-full rounded-lg">
                 <h2 class="titulo mt-2.5 mb-[5px]">Resumen del Turno</h2>
                 <p id="totalPedidos" class="text-[1.2rem] font-bold text-cafe"></p>
+                <p id="actualizado" class="mt-1 text-[0.85rem] text-[#8a7a6f]"></p>
             </div>
             <div id="listaPedidos"></div>
         </div>
 
+        <button id="btnCompartir" class="boton bg-verde">📤 Compartir resumen</button>
+        <button id="btnVolver" class="boton bg-cafe">☕ Volver al pedido</button>
         <button id="btnLimpiarTurno" class="boton mt-5 bg-rojo">🗑️ Finalizar Turno (Borrar lista)</button>
-        <button id="btnVolver" class="boton bg-gris">Volver atrás</button>
         <button id="btnCerrarSesion" class="boton bg-pizarra">🚪 Cerrar Sesión</button>
     </div>
     <script src="catalogo.js"></script>

@@ -12,35 +12,23 @@ app.set('trust proxy', true);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Admite lo que hay en la carta o, para "Otro", cualquier texto corto. Se
-// queda con las cosas válidas y descarta el resto: lo que no vale es que no
-// quede nada.
-function normalizarItems(items) {
-    if (!Array.isArray(items)) return [];
+// Los datos cambian a cada rato (pedidos, resumen...), así que el navegador no
+// debe guardarlos. Sin esto, al volver atrás desde el resumen el móvil enseña
+// la respuesta de antes de guardar, como si no hubieras pedido.
+app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+});
 
-    const vistos = new Set();
-    const salida = [];
-
-    for (const item of items) {
-        if (salida.length >= catalogo.maxItems) break;
-        if (!item || (item.clase !== 'bebida' && item.clase !== 'pincho')) continue;
-
-        const nombre = String(item.nombre || '').trim();
-        if (!nombre || nombre.length > catalogo.maxLongitudOtro) continue;
-
-        const clave = `${item.clase}|${nombre.toLowerCase()}`;
-        if (vistos.has(clave)) continue;
-        vistos.add(clave);
-
-        salida.push({
-            clase: item.clase,
-            nombre,
-            // El hielo solo vale en los cafés de la carta, venga lo que venga
-            hielo: catalogo.admiteHielo(item.clase, nombre) && Boolean(item.hielo),
-        });
-    }
-
-    return salida;
+// Una fila de pedido_items tal cual la quiere la pantalla
+function itemDeFila(fila) {
+    return {
+        clase: fila.clase,
+        nombre: fila.nombre,
+        cantidad: Number(fila.cantidad) || 1,
+        hielo: Boolean(fila.hielo),
+        plancha: Boolean(fila.plancha),
+    };
 }
 
 // Igual que con la carta: valen los de la lista o, para "Otro", texto corto.
@@ -265,7 +253,7 @@ app.get('/api/preferencia', requireAuth, async (req, res) => {
 // Cuánto le queda vivo a un pedido, en segundos. Se calcula en la base de
 // datos para no depender de la hora del móvil.
 const SQL_SEGUNDOS_RESTANTES =
-    `GREATEST(0, EXTRACT(EPOCH FROM (creado_en + ($2::int * INTERVAL '1 minute') - now())))::int`;
+    `GREATEST(0, EXTRACT(EPOCH FROM (expira_en - now())))::int`;
 
 // Mi pedido de este turno, para poder repasarlo y cambiarlo
 app.get('/api/mi-pedido', requireAuth, async (req, res) => {
@@ -273,22 +261,35 @@ app.get('/api/mi-pedido', requireAuth, async (req, res) => {
         await db.limpiarPedidosCaducados();
 
         const { rows } = await db.query(
-            `SELECT ${SQL_SEGUNDOS_RESTANTES} AS segundos, i.clase, i.nombre, i.hielo
+            `SELECT ${SQL_SEGUNDOS_RESTANTES} AS segundos, p.creado_en,
+                    i.clase, i.nombre, i.cantidad, i.hielo, i.plancha
              FROM pedidos p
              LEFT JOIN pedido_items i ON i.pedido_id = p.id
              WHERE p.usuario = $1
              ORDER BY i.id`,
-            [req.usuario, db.MINUTOS_TURNO]
+            [req.usuario]
         );
 
-        if (rows.length === 0) return res.json({ hay: false });
+        if (rows.length === 0) {
+            // Sin pedido se dice hasta cuándo aguantaría uno hecho ahora, para
+            // que se sepa antes de pedir (en el primer turno, hasta FIN_PRIMER_TURNO)
+            const ahora = await db.query(
+                `SELECT GREATEST(0, EXTRACT(EPOCH FROM (${db.SQL_EXPIRA_AHORA} - now())))::int AS segundos,
+                        ${db.SQL_ES_PRIMER_TURNO} AS primer_turno`
+            );
+            return res.json({
+                hay: false,
+                msSiPides: ahora.rows[0].segundos * 1000,
+                primerTurno: Boolean(ahora.rows[0].primer_turno),
+                minutosTurno: db.MINUTOS_TURNO,
+            });
+        }
 
         res.json({
             hay: true,
             msRestantes: rows[0].segundos * 1000,
-            items: rows
-                .filter(fila => fila.nombre)
-                .map(fila => ({ clase: fila.clase, nombre: fila.nombre, hielo: Boolean(fila.hielo) })),
+            creadoEn: rows[0].creado_en,
+            items: rows.filter(fila => fila.nombre).map(itemDeFila),
         });
     } catch (err) {
         res.status(500).json({ error: 'Error del servidor' });
@@ -299,7 +300,7 @@ app.get('/api/mi-pedido', requireAuth, async (req, res) => {
 // nuevo en vez de rechazarlo. Se respeta la hora del pedido original, así que
 // cambiarlo no alarga el turno ni retrasa la caducidad.
 app.post('/api/pedidos', requireAuth, async (req, res) => {
-    const items = normalizarItems(req.body.items);
+    const items = catalogo.normalizarPedido(req.body.items);
     if (items.length === 0) {
         return res.status(400).json({ error: 'Elige al menos una bebida o un pincho.' });
     }
@@ -308,16 +309,15 @@ app.post('/api/pedidos', requireAuth, async (req, res) => {
         await db.limpiarPedidosCaducados();
 
         // Todo en una transacción: quitar lo viejo y poner lo nuevo no puede
-        // quedarse a medias y dejar el pedido vacío.
+        // quedarse a medias y dejar el pedido vacío. Si ya había pedido, se
+        // apunta cuándo se cambió pero la caducidad no se toca.
         const guardado = await db.transaccion(async (q) => {
-            const previo = await q(`SELECT id FROM pedidos WHERE usuario = $1`, [req.usuario]);
-
             const { rows } = await q(
-                `INSERT INTO pedidos (usuario)
-                 VALUES ($1)
-                 ON CONFLICT (usuario) DO UPDATE SET usuario = EXCLUDED.usuario
-                 RETURNING id, ${SQL_SEGUNDOS_RESTANTES} AS segundos`,
-                [req.usuario, db.MINUTOS_TURNO]
+                `INSERT INTO pedidos (usuario, expira_en)
+                 VALUES ($1, ${db.SQL_EXPIRA_AHORA})
+                 ON CONFLICT (usuario) DO UPDATE SET actualizado_en = now()
+                 RETURNING id, creado_en, (xmax = 0) AS es_nuevo, ${SQL_SEGUNDOS_RESTANTES} AS segundos`,
+                [req.usuario]
             );
             const pedidoId = rows[0].id;
 
@@ -325,19 +325,21 @@ app.post('/api/pedidos', requireAuth, async (req, res) => {
 
             const valores = [];
             const marcadores = items.map((item, i) => {
-                valores.push(pedidoId, item.clase, item.nombre, item.hielo);
-                const base = i * 4;
-                return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`;
+                valores.push(pedidoId, item.clase, item.nombre, item.cantidad, item.hielo, item.plancha);
+                const base = i * 6;
+                return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`;
             });
             await q(
-                `INSERT INTO pedido_items (pedido_id, clase, nombre, hielo) VALUES ${marcadores.join(', ')}`,
+                `INSERT INTO pedido_items (pedido_id, clase, nombre, cantidad, hielo, plancha)
+                 VALUES ${marcadores.join(', ')}`,
                 valores
             );
 
             return {
                 id: pedidoId,
                 msRestantes: rows[0].segundos * 1000,
-                modificado: previo.rows.length > 0,
+                creadoEn: rows[0].creado_en,
+                modificado: !rows[0].es_nuevo,
                 // Lo que ha quedado guardado de verdad (ya normalizado), para
                 // que la pantalla enseñe eso y no lo que creía haber mandado
                 items,
@@ -657,27 +659,34 @@ app.post('/api/avisar', async (req, res) => {
     }
 });
 
-// Resumen del turno actual (solo los pedidos que siguen vivos)
+// Resumen del turno actual (solo los pedidos que siguen vivos), por orden de
+// llegada: el primero que pidió sale el primero. Cambiar el pedido no te
+// mueve de sitio.
 app.get('/api/resumen', requireAuth, async (req, res) => {
     try {
         await db.limpiarPedidosCaducados();
         const { rows } = await db.query(
-            `SELECT p.id, p.usuario, i.clase, i.nombre, i.hielo
+            `SELECT p.id, p.usuario, p.creado_en, p.actualizado_en, p.expira_en,
+                    i.clase, i.nombre, i.cantidad, i.hielo, i.plancha
              FROM pedidos p
              JOIN pedido_items i ON i.pedido_id = p.id
-             ORDER BY p.creado_en, i.id`
+             ORDER BY p.creado_en, p.id, i.id`
         );
 
         // Las filas vienen sueltas (una por cosa pedida); se agrupan por
         // persona, que es como se lee el resumen.
         const porPedido = new Map();
         for (const fila of rows) {
-            if (!porPedido.has(fila.id)) porPedido.set(fila.id, { usuario: fila.usuario, items: [] });
-            porPedido.get(fila.id).items.push({
-                clase: fila.clase,
-                nombre: fila.nombre,
-                hielo: Boolean(fila.hielo),
-            });
+            if (!porPedido.has(fila.id)) {
+                porPedido.set(fila.id, {
+                    usuario: fila.usuario,
+                    creadoEn: fila.creado_en,
+                    modificadoEn: fila.actualizado_en,
+                    expiraEn: fila.expira_en,
+                    items: [],
+                });
+            }
+            porPedido.get(fila.id).items.push(itemDeFila(fila));
         }
 
         res.json([...porPedido.values()]);

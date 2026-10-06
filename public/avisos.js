@@ -9,7 +9,9 @@ const textoAvisos = document.getElementById('textoNotificaciones');
 const btnAvisarme = document.getElementById('btnAvisarme');
 const estadoAvisos = document.getElementById('estadoAvisos');
 
-const HORA_AVISO = CATALOGO.horaAviso;
+// No puede llamarse HORA_AVISO: ese nombre ya lo usa catalogo.js, que se carga
+// en la misma página, y repetirlo tumba este script entero.
+const HORA_DEL_AVISO = CATALOGO.horaAviso;
 
 const soportaAvisos =
     'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -36,7 +38,7 @@ function ocultarBloque() {
 function mostrarYaAvisado() {
     ocultarBloque();
     estadoAvisos.innerText = '';
-    estadoAvisos.append(`🔔 Te avisaré cada día a las ${HORA_AVISO}. `);
+    estadoAvisos.append(`🔔 Te avisaré cada día a las ${HORA_DEL_AVISO}. `);
     const quitar = document.createElement('button');
     quitar.type = 'button';
     quitar.className = 'underline';
@@ -147,7 +149,7 @@ async function arrancarAvisos() {
     // esté en la pantalla de inicio, así que se explica cómo.
     if (esIOS && !desdeIcono) {
         mostrarBloque(
-            `🔔 ¿Quieres que te avise cada día a las ${HORA_AVISO}? En iPhone hace falta ` +
+            `🔔 ¿Quieres que te avise cada día a las ${HORA_DEL_AVISO}? En iPhone hace falta ` +
             'tener Cafendo en la pantalla de inicio: toca el botón de Compartir de Safari, ' +
             'elige "Añadir a pantalla de inicio" y abre Cafendo desde ese icono. Aquí te ' +
             'saldrá el botón para activarlo.',
@@ -161,7 +163,7 @@ async function arrancarAvisos() {
     if (Notification.permission === 'denied') {
         mostrarBloque(
             'Tienes los avisos bloqueados para Cafendo. Si quieres que te avise a las ' +
-            `${HORA_AVISO}, actívalos en los ajustes de notificaciones del móvil.`,
+            `${HORA_DEL_AVISO}, actívalos en los ajustes de notificaciones del móvil.`,
             false
         );
         return;
@@ -201,7 +203,7 @@ async function arrancarAvisos() {
         return;
     }
 
-    mostrarBloque(`🔔 ¿Quieres que te avise cada día a las ${HORA_AVISO} para pedir?`, true);
+    mostrarBloque(`🔔 ¿Quieres que te avise cada día a las ${HORA_DEL_AVISO} para pedir?`, true);
 }
 
 btnAvisarme.addEventListener('click', activarAviso);
