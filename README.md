@@ -65,20 +65,21 @@ oficina y sin depender de que un ordenador esté encendido.
    falta que nadie borre nada a mano ni que haya un proceso corriendo de
    fondo: la limpieza se hace al pedir y al mirar el resumen.
 6. **Resumen**: solo del turno en curso, en dos partes.
-   - **Pedidos por orden de llegada**: una fila por persona, separadas, con el
-     **nombre en negrita**, dos puntos, lo que ha pedido y, al final, la hora a
-     la que lo pidió. Van ordenadas por esa hora (el primero que pidió, el
-     primero) y cambiar el pedido no te mueve de sitio: si alguien lo ha
-     cambiado sale también la hora del cambio (✏️). Tu fila sale resaltada.
    - **Para pedir en la barra**: los totales de cada bebida y cada pincho
      sumando las cantidades de todos, los vasos de hielo, y lo de la plancha
      aparte ("Croissant a la plancha"). Lo escrito a mano por varios se junta
      aunque cada uno lo haya escrito a su manera.
-   El botón "Compartir resumen" lo manda por WhatsApp (o lo copia, donde no se
-   puede compartir) con los nombres en negrita. Se refresca solo cada 20
-   segundos, así que las modificaciones de última hora se ven sin recargar. El
-   botón "Finalizar Turno" lo vacía a mano por si se quiere arrancar la
-   siguiente ronda sin esperar.
+   - **Pedidos por orden de llegada**, debajo: una fila por persona, separadas,
+     con el **nombre en negrita**, dos puntos, lo que ha pedido y, al final, la
+     hora a la que lo pidió. Van ordenadas por esa hora (el primero que pidió,
+     el primero) y cambiar el pedido no te mueve de sitio: si alguien lo ha
+     cambiado sale también la hora del cambio (✏️). Tu fila sale resaltada.
+   Se actualiza **al momento**: mientras la pantalla está a la vista pregunta
+   al servidor cada 3 segundos, así que un pedido nuevo, un cambio o uno
+   anulado salen enseguida sin recargar (con la app en segundo plano no
+   pregunta nada, y al volver se pone al día en el acto). El botón "Finalizar
+   Turno" lo vacía a mano por si se quiere arrancar la siguiente ronda sin
+   esperar.
 7. **Lista de la compra**: el botón amarillo lleva a una pantalla aparte donde
    se apunta lo que hace falta reponer en el laboratorio (café, papel, vasos...,
    más "Otro" a mano). No tiene nada que ver con el turno del café: **no
