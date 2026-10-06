@@ -58,9 +58,33 @@ if (DATABASE_URL) {
 // Se puede cambiar con la variable de entorno MINUTOS_TURNO.
 const MINUTOS_TURNO = Math.min(1440, Math.max(1, Math.round(Number(process.env.MINUTOS_TURNO) || 25)));
 
-// MINUTOS_TURNO siempre es un número finito, así que interpolarlo aquí es seguro
-const SQL_BORRAR_CADUCADOS =
-    `DELETE FROM pedidos WHERE creado_en < now() - INTERVAL '${MINUTOS_TURNO} minutes'`;
+// El primer turno, el del aviso de la mañana, no caduca a los 25 minutos:
+// aguanta entero hasta esta hora, que es cuando se baja al bar. Todo lo pedido
+// antes se borra a la vez a esta hora, y a partir de ahí cada pedido dura
+// MINUTOS_TURNO como siempre. Se puede cambiar con FIN_PRIMER_TURNO (HH:MM).
+const FIN_PRIMER_TURNO = /^([01]?\d|2[0-3]):[0-5]\d$/.test(process.env.FIN_PRIMER_TURNO || '')
+    ? process.env.FIN_PRIMER_TURNO
+    : '11:15';
+
+// La hora del laboratorio, no la del servidor (Vercel va en UTC)
+const ZONA_HORARIA = 'Europe/Madrid';
+
+// Si ahora mismo es el primer turno. MINUTOS_TURNO es un número finito y
+// FIN_PRIMER_TURNO ha pasado por la expresión regular de arriba, así que
+// interpolarlos en estas consultas es seguro.
+const SQL_ES_PRIMER_TURNO =
+    `((now() AT TIME ZONE '${ZONA_HORARIA}')::time < '${FIN_PRIMER_TURNO}'::time)`;
+
+// Cuándo caduca un pedido hecho ahora mismo. Se calcula una vez, al crearlo, y
+// se guarda en el propio pedido: así cambiarlo luego no alarga el turno.
+const SQL_EXPIRA_AHORA = `CASE
+    WHEN ${SQL_ES_PRIMER_TURNO}
+    THEN (date_trunc('day', now() AT TIME ZONE '${ZONA_HORARIA}') + '${FIN_PRIMER_TURNO}'::time)
+         AT TIME ZONE '${ZONA_HORARIA}'
+    ELSE now() + INTERVAL '${MINUTOS_TURNO} minutes'
+END`;
+
+const SQL_BORRAR_CADUCADOS = `DELETE FROM pedidos WHERE expira_en <= now()`;
 
 const ESQUEMA = [
     `CREATE TABLE IF NOT EXISTS usuarios (
@@ -95,6 +119,17 @@ const ESQUEMA = [
         hielo BOOLEAN NOT NULL DEFAULT FALSE
     )`,
     `CREATE INDEX IF NOT EXISTS pedido_items_pedido ON pedido_items (pedido_id)`,
+    // Cuántas de cada cosa (dos cafés con leche son una fila con cantidad 2) y
+    // si el croissant va a la plancha.
+    `ALTER TABLE pedido_items ADD COLUMN IF NOT EXISTS cantidad INTEGER NOT NULL DEFAULT 1`,
+    `ALTER TABLE pedido_items ADD COLUMN IF NOT EXISTS plancha BOOLEAN NOT NULL DEFAULT FALSE`,
+    // Cuándo se cambió el pedido por última vez (vacío si no se ha tocado) y
+    // cuándo caduca. Los pedidos de antes de existir la columna caducan como
+    // caducaban entonces, a los MINUTOS_TURNO de hacerse.
+    `ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS actualizado_en TIMESTAMPTZ`,
+    `ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS expira_en TIMESTAMPTZ`,
+    `UPDATE pedidos SET expira_en = creado_en + INTERVAL '${MINUTOS_TURNO} minutes' WHERE expira_en IS NULL`,
+    `ALTER TABLE pedidos ALTER COLUMN expira_en SET NOT NULL`,
     // Ajustes internos del servidor. Guarda el secreto que firma las sesiones
     // para que todas las instancias de Vercel usen el mismo: si cada una se
     // inventa el suyo, el token que da el login lo rechaza la siguiente.
@@ -201,4 +236,7 @@ async function ajusteEstable(clave, valorPropuesto) {
     return rows[0] ? rows[0].valor : valorPropuesto;
 }
 
-module.exports = { query, transaccion, limpiarPedidosCaducados, ajusteEstable, MINUTOS_TURNO };
+module.exports = {
+    query, transaccion, limpiarPedidosCaducados, ajusteEstable,
+    MINUTOS_TURNO, FIN_PRIMER_TURNO, SQL_EXPIRA_AHORA, SQL_ES_PRIMER_TURNO,
+};

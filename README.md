@@ -17,17 +17,34 @@ oficina y sin depender de que un ordenador esté encendido.
    apartados. Se puede marcar **varias cosas de cada uno** (dos cafés y tres
    pinchos, si hace falta), o solo de uno: nada es obligatorio mientras se pida
    algo.
-   - **Cafés y bebidas**: Solo, Con Leche, Cortado, Descafeinado, Mosto y
-     Colacao, u "Otro" escribiendo a mano lo que sea (una Coca-Cola, un té...).
-     La casilla de hielo sale **solo en los cafés** al marcarlos: al Mosto, al
-     Colacao y a "Otro" no se les pregunta.
+   - **Cafés y bebidas**: Solo, Con Leche, Cortado, Descafeinado, Mosto,
+     Colacao y Coca-Cola. La casilla de hielo (❄️) sale **solo en los cafés**
+     al marcarlos: al Mosto, al Colacao, a la Coca-Cola y a lo escrito a mano
+     no se les pregunta.
    - **Pinchos**: Patatas, Jeta, Gulas, Huevos rotos, Lasaña, Tortilla,
-     Bocadillo, Gambas rebozadas, Sandwich, Empanadilla, Croissant, Rabas y
-     Bacalao, más "Otro" a mano.
+     Bocadillo, Gambas rebozadas, Sandwich, Vegetal, Empanadilla, Croissant,
+     Rabas y Bacalao. Al marcar el **Croissant** sale al lado el botón
+     **🔥 Plancha**, por si se quiere a la plancha.
+   - **Cantidad**: al marcar algo sale a su lado un botón **x1**. Cada toque
+     suma uno (x2, x3... hasta x9) y aparece un "−" para restar. Para quitarlo
+     del todo se desmarca. El hielo y la plancha valen para todas las unidades
+     de esa línea.
+   - **Otro**: debajo de cada apartado hay un campo para escribir lo que no
+     esté en la carta y un botón "Añadir", que lo mete en la lista como una
+     fila más. Si lo escrito **ya está en el pedido** (de la carta o añadido
+     antes) no sale repetido: se le suma uno y pasa a x2. Da igual cómo se
+     escriba: "croissant", "cruasán", "coca cola" o "café con leche" cuentan
+     como lo de la carta. Lo que se quede escrito sin darle a "Añadir" también
+     se guarda.
+   - **Tu pedido**: debajo de los dos apartados se ve todo lo elegido con su
+     cantidad, con una ✕ para quitar cada cosa. El botón de guardar se queda
+     fijo abajo mientras se baja por la carta y dice cuántas cosas lleva.
    Si esa persona ya pidió otro día, arriba le sale un aviso con lo que pidió
    la última vez y dos botones: repetirlo tal cual o elegir otra cosa.
 3. **Guardar**: un pedido por persona mientras dure el turno (aunque se dé
    doble toque a la vez desde el móvil, la base de datos solo deja pasar uno).
+   Al guardar te lleva **directamente al resumen**, con un aviso arriba de que
+   ha ido bien.
 4. **Cambiar de idea**: quien ya ha pedido ve arriba lo que tiene pedido, y la
    pantalla sale con sus cosas ya marcadas. A partir de ahí puede:
    - **Modificar el pedido** las veces que quiera: se marca o desmarca lo que
@@ -37,16 +54,31 @@ oficina y sin depender de que un ordenador esté encendido.
    - **Anular el pedido** y volver a pedir de cero cuando quiera, sin esperar a
      que caduque. Las casillas se quedan como estaban, así que si ha sido sin
      querer basta con darle otra vez a "Guardar Pedido".
-5. **Los pedidos caducan a los 25 minutos**: se borran solos de la base de
-   datos, así el segundo turno abre el resumen y lo ve limpio, sin los cafés
-   de la ronda anterior, y quien ya pidió puede volver a pedir. No hace falta
-   que nadie borre nada a mano ni que haya un proceso corriendo de fondo: la
-   limpieza se hace al pedir y al mirar el resumen.
-6. **Resumen**: totales por bebida, por pincho, vasos con hielo y quién ha
-   pedido qué, solo del turno en curso. Se refresca solo cada 30 segundos, así
-   que las modificaciones de última hora se ven sin recargar. El botón
-   "Finalizar Turno" lo vacía a mano por si se quiere arrancar la siguiente
-   ronda sin esperar los 25 minutos.
+5. **Los pedidos caducan solos**: se borran de la base de datos, así el
+   segundo turno abre el resumen y lo ve limpio, sin los cafés de la ronda
+   anterior, y quien ya pidió puede volver a pedir.
+   - **Primer turno, hasta las 11:15**: todo lo pedido antes de esa hora (el
+     turno del aviso de las 10:30) aguanta entero hasta las 11:15 y se borra
+     todo a la vez a esa hora, en hora de Madrid.
+   - **Después de las 11:15**: cada pedido dura 25 minutos desde que se hizo.
+   La pantalla del pedido dice antes de pedir hasta cuándo aguantará. No hace
+   falta que nadie borre nada a mano ni que haya un proceso corriendo de
+   fondo: la limpieza se hace al pedir y al mirar el resumen.
+6. **Resumen**: solo del turno en curso, en dos partes.
+   - **Pedidos por orden de llegada**: una fila por persona, separadas, con el
+     **nombre en negrita**, dos puntos, lo que ha pedido y, al final, la hora a
+     la que lo pidió. Van ordenadas por esa hora (el primero que pidió, el
+     primero) y cambiar el pedido no te mueve de sitio: si alguien lo ha
+     cambiado sale también la hora del cambio (✏️). Tu fila sale resaltada.
+   - **Para pedir en la barra**: los totales de cada bebida y cada pincho
+     sumando las cantidades de todos, los vasos de hielo, y lo de la plancha
+     aparte ("Croissant a la plancha"). Lo escrito a mano por varios se junta
+     aunque cada uno lo haya escrito a su manera.
+   El botón "Compartir resumen" lo manda por WhatsApp (o lo copia, donde no se
+   puede compartir) con los nombres en negrita. Se refresca solo cada 20
+   segundos, así que las modificaciones de última hora se ven sin recargar. El
+   botón "Finalizar Turno" lo vacía a mano por si se quiere arrancar la
+   siguiente ronda sin esperar.
 7. **Lista de la compra**: el botón amarillo lleva a una pantalla aparte donde
    se apunta lo que hace falta reponer en el laboratorio (café, papel, vasos...,
    más "Otro" a mano). No tiene nada que ver con el turno del café: **no
@@ -233,10 +265,13 @@ cafendo/
 
 ## Base de datos
 
-Tablas `usuarios (id, nombre)`, `pedidos (id, usuario, creado_en)` y
-`pedido_items (id, pedido_id, clase, nombre, hielo)`. El pedido en sí solo dice
-quién y cuándo; lo que se pide va en `pedido_items`, una fila por bebida o
-pincho, que es lo que permite pedir varias cosas. Hay un índice único por
+Tablas `usuarios (id, nombre)`,
+`pedidos (id, usuario, creado_en, actualizado_en, expira_en)` y
+`pedido_items (id, pedido_id, clase, nombre, cantidad, hielo, plancha)`. El
+pedido en sí solo dice quién, cuándo lo hizo, cuándo lo cambió por última vez y
+cuándo caduca (se calcula al crearlo y no cambia al modificarlo); lo que se
+pide va en `pedido_items`, una fila por cada cosa distinta con su cantidad, que
+es lo que permite pedir varias cosas. Hay un índice único por
 `usuario` — eso es lo que impide pedidos duplicados en el mismo turno, incluso
 si dos peticiones llegan a la vez. Como los pedidos se borran al caducar, esa
 misma restricción deja pedir otra vez en el turno siguiente.
@@ -263,6 +298,9 @@ cada uno. Aparte hay dos tablas que no caducan:
 
 - **Duración del turno**: variable de entorno `MINUTOS_TURNO` (por defecto
   `25`). En Vercel se pone en Settings → Environment Variables.
+- **Fin del primer turno**: variable de entorno `FIN_PRIMER_TURNO` (por
+  defecto `11:15`, en hora de Madrid). Lo pedido antes de esa hora aguanta
+  hasta ella.
 - **Hora del aviso**: se cambia en el servicio de cron externo, no en el
   código. Si cambias la hora, retoca también el texto `HORA_AVISO` de
   `public/avisos.js`, que es lo que se lee en el botón.
@@ -271,7 +309,12 @@ cada uno. Aparte hay dos tablas que no caducan:
 - **Bebidas y pinchos**: la carta sale de `public/catalogo.js`. Se añade el
   nombre a la lista `BEBIDAS` o `PINCHOS` (y su emoji en `ICONOS`, opcional);
   la pantalla del pedido se pinta sola y el servidor valida contra esa misma
-  lista. Si lo nuevo es un café que puede pedirse con hielo, va en `CAFES`.
+  lista. Si lo nuevo es un café que puede pedirse con hielo, va en `CAFES`; si
+  se puede pedir a la plancha, en `A_LA_PLANCHA`. Las otras formas de
+  escribirlo en "Otro" que deban contar como lo de la carta van en `ALIAS`
+  (las mayúsculas, tildes, espacios y guiones ya se ignoran solos). Los topes
+  son `MAX_ITEMS` (cosas distintas por pedido) y `MAX_CANTIDAD` (unidades de
+  cada una).
 
 ## Seguridad
 
