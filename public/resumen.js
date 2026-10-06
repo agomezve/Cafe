@@ -5,11 +5,20 @@ exigirSesion();
 // Con la app en segundo plano no se pregunta nada.
 const MS_REFRESCO = 3000;
 
+// Una petición que no contesta (al pasar del wifi a los datos, por ejemplo) no
+// puede dejar el directo parado: pasado este tiempo se da por perdida y se
+// vuelve a preguntar.
+const MS_ESPERA_MAXIMA = 10000;
+
 // Lo último que se pintó, para no repintar si no ha cambiado nada (así la
 // pantalla no parpadea ni salta cada pocos segundos)
 let ultimoPintado = null;
 let cargando = false;
 let temporizador = null;
+
+// Sube cada vez que se vacía la lista a mano: una respuesta que salió antes
+// trae los pedidos de antes de borrar y ya no vale.
+let vuelta = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
     avisarHecho();
@@ -165,17 +174,25 @@ function pintarResumen(pedidos) {
 
 async function cargarPedidos() {
     const actualizado = document.getElementById('actualizado');
+    const miVuelta = vuelta;
+    const control = new AbortController();
+    const plazo = setTimeout(() => control.abort(), MS_ESPERA_MAXIMA);
 
     let pedidos;
     try {
-        const respuesta = await authFetch('/api/resumen');
+        const respuesta = await authFetch('/api/resumen', { signal: control.signal });
         if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
         pedidos = await respuesta.json();
     } catch (err) {
         // Se deja lo que hubiera en pantalla y se reintenta en el siguiente refresco
         actualizado.innerText = '⚠️ No se pudo actualizar. Se reintentará solo.';
         return;
+    } finally {
+        clearTimeout(plazo);
     }
+
+    // Si mientras llegaba se ha finalizado el turno, es la lista de antes
+    if (miVuelta !== vuelta) return;
 
     pintarResumen(pedidos);
     actualizado.innerText = '🟢 En directo: los pedidos salen según llegan';
@@ -185,8 +202,10 @@ document.getElementById('btnLimpiarTurno').addEventListener('click', async () =>
     if (!confirm('¿Seguro que quieres borrar todos los pedidos para empezar un nuevo turno?')) return;
 
     try {
-        await authFetch('/api/pedidos', { method: 'DELETE' });
+        const respuesta = await authFetch('/api/pedidos', { method: 'DELETE' });
+        if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
         // Vacía en el acto, aunque hubiera una consulta a medias
+        vuelta++;
         pintarResumen([]);
     } catch (err) {
         alert('No se pudo borrar la lista. Inténtalo otra vez.');
