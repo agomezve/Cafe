@@ -367,13 +367,9 @@ function pintarConPedido(pedido) {
     pintarBoton();
 }
 
-// Sin pedido, se dice hasta cuándo aguantaría uno hecho ahora: en el primer
-// turno, todo hasta la misma hora; después, unos minutos cada uno.
+// Sin pedido, se dice cuánto aguantaría uno hecho ahora
 function textoSiPides(mio) {
-    if (!mio || !mio.msSiPides) return '';
-    if (mio.primerTurno) {
-        return `☕ Primer turno: los pedidos aguantan hasta las ${horaDentroDe(mio.msSiPides)}.`;
-    }
+    if (!mio || !mio.minutosTurno) return '';
     return `Tu pedido aguantará ${mio.minutosTurno} minutos desde que lo guardes.`;
 }
 

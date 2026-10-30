@@ -1,4 +1,4 @@
-const CACHE = 'cafendo-v13';
+const CACHE = 'cafendo-v14';
 const ARCHIVOS = [
     'index.html',
     'app.html',
