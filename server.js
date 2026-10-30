@@ -271,18 +271,9 @@ app.get('/api/mi-pedido', requireAuth, async (req, res) => {
         );
 
         if (rows.length === 0) {
-            // Sin pedido se dice hasta cuándo aguantaría uno hecho ahora, para
-            // que se sepa antes de pedir (en el primer turno, hasta FIN_PRIMER_TURNO)
-            const ahora = await db.query(
-                `SELECT GREATEST(0, EXTRACT(EPOCH FROM (${db.SQL_EXPIRA_AHORA} - now())))::int AS segundos,
-                        ${db.SQL_ES_PRIMER_TURNO} AS primer_turno`
-            );
-            return res.json({
-                hay: false,
-                msSiPides: ahora.rows[0].segundos * 1000,
-                primerTurno: Boolean(ahora.rows[0].primer_turno),
-                minutosTurno: db.MINUTOS_TURNO,
-            });
+            // Sin pedido se dice cuánto aguantaría uno hecho ahora, para que
+            // se sepa antes de pedir
+            return res.json({ hay: false, minutosTurno: db.MINUTOS_TURNO });
         }
 
         res.json({

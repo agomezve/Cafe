@@ -54,16 +54,14 @@ oficina y sin depender de que un ordenador esté encendido.
    - **Anular el pedido** y volver a pedir de cero cuando quiera, sin esperar a
      que caduque. Las casillas se quedan como estaban, así que si ha sido sin
      querer basta con darle otra vez a "Guardar Pedido".
-5. **Los pedidos caducan solos**: se borran de la base de datos, así el
-   segundo turno abre el resumen y lo ve limpio, sin los cafés de la ronda
-   anterior, y quien ya pidió puede volver a pedir.
-   - **Primer turno, hasta las 11:15**: todo lo pedido antes de esa hora (el
-     turno del aviso de las 10:30) aguanta entero hasta las 11:15 y se borra
-     todo a la vez a esa hora, en hora de Madrid.
-   - **Después de las 11:15**: cada pedido dura 25 minutos desde que se hizo.
-   La pantalla del pedido dice antes de pedir hasta cuándo aguantará. No hace
-   falta que nadie borre nada a mano ni que haya un proceso corriendo de
-   fondo: la limpieza se hace al pedir y al mirar el resumen.
+5. **Los pedidos caducan a los 25 minutos** de hacerse, sea la hora que sea:
+   se borran solos de la base de datos, así el segundo turno abre el resumen y
+   lo ve limpio, sin los cafés de la ronda anterior, y quien ya pidió puede
+   volver a pedir. No hay ninguna hora fija a la que se borre todo: un pedido
+   hecho a las 11:05 aguanta hasta las 11:30. La pantalla del pedido dice
+   antes de pedir cuánto aguantará. No hace falta que nadie borre nada a mano
+   ni que haya un proceso corriendo de fondo: la limpieza se hace al pedir y
+   al mirar el resumen.
 6. **Resumen**: solo del turno en curso, en dos partes.
    - **Para pedir en la barra**: los totales de cada bebida y cada pincho
      sumando las cantidades de todos, los vasos de hielo, y lo de la plancha
@@ -299,9 +297,6 @@ cada uno. Aparte hay dos tablas que no caducan:
 
 - **Duración del turno**: variable de entorno `MINUTOS_TURNO` (por defecto
   `25`). En Vercel se pone en Settings → Environment Variables.
-- **Fin del primer turno**: variable de entorno `FIN_PRIMER_TURNO` (por
-  defecto `11:15`, en hora de Madrid). Lo pedido antes de esa hora aguanta
-  hasta ella.
 - **Hora del aviso**: se cambia en el servicio de cron externo, no en el
   código. Si cambias la hora, retoca también el texto `HORA_AVISO` de
   `public/avisos.js`, que es lo que se lee en el botón.
